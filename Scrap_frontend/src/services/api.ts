@@ -6,7 +6,7 @@ import { storage } from './storage';
 const isWeb = Platform.OS === 'web';
 
 // Web uses localhost; native (iOS/Android) uses local network IP
-const DEFAULT_URL = isWeb ? 'http://localhost:5000' : 'http://192.168.1.10:5000';
+const DEFAULT_URL = isWeb ? 'http://localhost:5000' : 'https://ecoscrap-1.onrender.com';
 export const BASE_URL = DEFAULT_URL;
 
 export const api = axios.create({
