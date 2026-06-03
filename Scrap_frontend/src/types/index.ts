@@ -51,7 +51,7 @@ export interface Pickup {
   id: string;
   user_id: string;
   address_id: string;
-  status: 'pending' | 'confirmed' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'pending' | 'accepted' | 'completed' | 'cancelled';
   scheduled_at: string | null;
   completed_at: string | null;
   total_amount: number | null;

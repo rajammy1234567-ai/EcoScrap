@@ -10,7 +10,7 @@ import {
   Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter, useFocusEffect } from "expo-router";
+import { useRouter, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "../../src/context/AuthContext";
 import { userService } from "../../src/services/user";
@@ -106,6 +106,10 @@ export default function SelectItemsScreen() {
       .catch(() => {});
   }, []);
 
+  const { selectedAddr: selectedAddrParam } = useLocalSearchParams<{
+    selectedAddr?: string;
+  }>();
+
   useFocusEffect(
     useCallback(() => {
       if (!isAuthenticated) return;
@@ -115,10 +119,13 @@ export default function SelectItemsScreen() {
           const addrs: Address[] = r.data.addresses ?? [];
           setAddresses(addrs);
           const def = addrs.find((a) => a.is_default);
-          setSelectedAddr(def?.id ?? addrs[0]?.id ?? null);
+          const selected = selectedAddrParam
+            ? addrs.find((a) => a.id === selectedAddrParam)
+            : undefined;
+          setSelectedAddr(selected?.id ?? def?.id ?? addrs[0]?.id ?? null);
         })
         .catch(() => {});
-    }, [isAuthenticated]),
+    }, [isAuthenticated, selectedAddrParam]),
   );
 
   const toggleCat = (id: string) => {
@@ -281,13 +288,32 @@ export default function SelectItemsScreen() {
           scheduled_at: scheduled.toISOString(),
         });
 
+        if (!res?.data?.pickup?.id) {
+          throw new Error("Invalid pickup response from server.");
+        }
+
         router.replace({
           pathname: "/(home)/pickup-success",
-          params: { pickupId: res.data.pickup.id },
+          params: {
+            pickupId: res.data.pickup.id,
+            scheduledAt: res.data.pickup.scheduled_at,
+          },
         });
         return;
-      } catch (err) {
-        showAlert("Error", "Could not schedule pickup. Please try again.");
+      } catch (err: any) {
+        const msg =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Could not schedule pickup. Please try again.";
+
+        if (err?.isNetworkError || err?.code === "ECONNABORTED") {
+          showAlert(
+            "Network Error",
+            "Unable to reach the server. Please check your internet connection or backend status.",
+          );
+        } else {
+          showAlert("Error", msg);
+        }
       }
     } finally {
       setLoading(false);

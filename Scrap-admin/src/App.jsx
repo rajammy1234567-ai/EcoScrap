@@ -1,0 +1,51 @@
+import React, { useState, useEffect } from "react";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { Header, Sidebar, LoadingSpinner } from "./components/Header";
+import { DashboardPage } from "./pages/DashboardPage";
+import { PickupsPage } from "./pages/PickupsPage";
+import { UsersPage } from "./pages/UsersPage";
+import { LoginPage } from "./pages/LoginPage";
+import { useNavigation, useLocation } from "./hooks/useNavigation";
+
+function AppContent() {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) return <LoadingSpinner />;
+
+  if (!user) {
+    return <LoginPage />;
+  }
+
+  const renderPage = () => {
+    switch (location) {
+      case "/pickups":
+        return <PickupsPage />;
+      case "/users":
+        return <UsersPage />;
+      case "/dashboard":
+      default:
+        return <DashboardPage />;
+    }
+  };
+
+  return (
+    <div className="flex bg-gray-50">
+      <Sidebar />
+      <div className="flex-1 ml-64">
+        <Header />
+        <main className="p-8">{renderPage()}</main>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
+
+export default App;

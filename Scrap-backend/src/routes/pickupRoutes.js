@@ -4,13 +4,14 @@ const {
   createPickup,
   getPickup,
   listPickups,
+  cancelPickup,
 } = require("../controllers/pickupController");
 const { protect } = require("../middlewares/auth");
 
-// Allow unauthenticated creation and listing for quick scheduling from app.
-// Protect detail GET to ensure privacy.
-router.post("/", createPickup);
+// All pickup operations require authentication now so pickups are always tied to a user.
+router.post("/", protect, createPickup);
 router.get("/:id", protect, getPickup);
-router.get("/", listPickups);
+router.put("/:id/cancel", protect, cancelPickup);
+router.get("/", protect, listPickups);
 
 module.exports = router;

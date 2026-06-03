@@ -2,13 +2,17 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import { storage } from './storage';
 
-const DEFAULT_URL = 'http://192.168.1.10:5000';
-export const BASE_URL = DEFAULT_URL; // Force local IP URL to work across emulators and physical devices
+// Detect if running on web or native
+const isWeb = Platform.OS === 'web';
+
+// Web uses localhost; native (iOS/Android) uses local network IP
+const DEFAULT_URL = isWeb ? 'http://localhost:5000' : 'http://192.168.1.10:5000';
+export const BASE_URL = DEFAULT_URL;
 
 export const api = axios.create({
   baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 8000,
+  timeout: 15000,
 });
 
 // Attach access token

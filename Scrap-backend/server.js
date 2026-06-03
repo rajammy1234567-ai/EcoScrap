@@ -7,6 +7,7 @@ const authRoutes = require("./src/routes/authRoutes");
 const scrapRoutes = require("./src/routes/scrapRoutes");
 const adminRoutes = require("./src/routes/adminRoutes");
 const addressRoutes = require("./src/routes/addressRoutes");
+const locationRoutes = require("./src/routes/locationRoutes");
 const publicScrapRoutes = require("./src/routes/publicScrapRoutes");
 const pickupRoutes = require("./src/routes/pickupRoutes");
 const dns = require("dns");
@@ -22,6 +23,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/scraps", scrapRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/v1/users/me/addresses", addressRoutes);
+app.use("/api/v1/location", locationRoutes);
 app.use("/api/v1/scrap", publicScrapRoutes);
 app.use("/api/v1/pickups", pickupRoutes);
 app.get("/api/health", (req, res) =>

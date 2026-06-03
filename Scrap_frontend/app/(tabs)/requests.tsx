@@ -9,7 +9,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { PickupCard } from "../../src/components/ui/PickupCard";
 import { pickupService } from "../../src/services/pickup";
@@ -44,12 +44,17 @@ const EMPTY_MESSAGES: Record<Tab, { title: string; sub: string }> = {
 
 export default function RequestsScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    pickupId?: string;
+    pickupJson?: string;
+  }>();
+  const pickupId = params.pickupId;
+  const pickupJson = params.pickupJson;
   const { isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("pending");
   const [pickups, setPickups] = useState<Pickup[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
-  
   const load = useCallback(
     async (tab: Tab) => {
       if (!isAuthenticated) {
@@ -75,6 +80,23 @@ export default function RequestsScreen() {
   useEffect(() => {
     load(activeTab);
   }, [activeTab, load]);
+
+  useEffect(() => {
+    if (!pickupId) return;
+
+    // Defer navigation slightly to avoid navigating before the root layout mounts.
+    const t = setTimeout(() => {
+      router.push({
+        pathname: "/(requests)/detail",
+        params: {
+          id: pickupId,
+          pickupJson,
+        },
+      });
+    }, 50);
+
+    return () => clearTimeout(t);
+  }, [pickupId, pickupJson, router]);
 
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
