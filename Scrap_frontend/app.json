@@ -73,8 +73,9 @@
       "router": {},
       "googlePlacesApiKey": "",
       "eas": {
-        "projectId": "c10239f5-0c19-4bce-88a2-eb5d6e9a80dd"
+        "projectId": "a1cabad3-7e5a-4ecc-b31c-c1b543915d62"
       }
-    }
+    },
+    "owner": "viz_eas001"
   }
 }

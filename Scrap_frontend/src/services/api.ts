@@ -3,10 +3,10 @@ import { Platform } from 'react-native';
 import { storage } from './storage';
 
 // Detect if running on web or native
-const isWeb = Platform.OS === 'web';
+
 
 // Web uses localhost; native (iOS/Android) uses local network IP
-const DEFAULT_URL = isWeb ? 'http://localhost:5000' : 'https://ecoscrap-1.onrender.com';
+const DEFAULT_URL ='https://ecoscrap-1.onrender.com';
 export const BASE_URL = DEFAULT_URL;
 
 export const api = axios.create({
