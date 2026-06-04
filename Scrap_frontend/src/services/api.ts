@@ -14,7 +14,7 @@ export const BASE_URL = __DEV__ ? DEV_URL : (process.env.EXPO_PUBLIC_API_URL?.re
 export const api = axios.create({
   baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 15000,
+  timeout: 60000,
 });
 
 // Attach access token
