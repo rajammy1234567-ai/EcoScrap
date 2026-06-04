@@ -6,10 +6,9 @@ import {
   FlatList,
   Pressable,
   Alert,
-  useFocusEffect,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { Header } from "../../src/components/shared/Header";
 import { Button } from "../../src/components/ui/Button";

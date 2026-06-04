@@ -11,6 +11,8 @@ const PROD_URL = 'https://ecoscrap-1.onrender.com';
 
 export const BASE_URL = __DEV__ ? DEV_URL : (process.env.EXPO_PUBLIC_API_URL?.replace('/api', '') || PROD_URL);
 
+console.log("BASE_URL =", BASE_URL);
+
 export const api = axios.create({
   baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },

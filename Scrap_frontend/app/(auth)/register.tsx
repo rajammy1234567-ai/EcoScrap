@@ -7,6 +7,7 @@ import {
   Pressable,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -17,36 +18,27 @@ import { useAuth } from "../../src/context/AuthContext";
 import { authService } from "../../src/services/auth";
 import { colors, radii, spacing, typography } from "../../src/theme";
 
-const DEMO_USER = {
-  id: "demo-user-001",
-  phone: "",
-  first_name: "Abhishek",
-  last_name: "Demo",
-  email: "demo@thekabadiwala.com",
-  referral_code: "DEMO123",
-  category: "individual",
-};
-
-export default function LoginScreen() {
+export default function RegisterScreen() {
   const router = useRouter();
   const { login } = useAuth();
+  
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleDemoLogin = async () => {
-    await login("demo-access-token", "demo-refresh-token", DEMO_USER);
-    router.replace("/(tabs)/home");
-  };
-
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert("Error", "Please enter both email and password.");
+  const handleRegister = async () => {
+    if (!firstName || !email || !password) {
+      Alert.alert("Error", "First Name, Email, and Password are required.");
       return;
     }
+    
     setLoading(true);
     try {
-      const { data } = await authService.login(email, password);
+      const name = `${firstName} ${lastName}`.trim();
+      const { data } = await authService.register(name, email, password, phone);
       await login(data.token, data.token, data.user);
       router.replace("/(tabs)/home");
     } catch (err: any) {
@@ -54,7 +46,7 @@ export default function LoginScreen() {
         err?.code === "ECONNABORTED" || err?.message?.includes("timeout")
           ? "Connection timed out. Make sure the server is running."
           : err?.response?.data?.message ||
-            "Could not login. Please check your credentials.";
+            "Could not register. Please try again.";
       Alert.alert("Error", msg);
     } finally {
       setLoading(false);
@@ -74,7 +66,7 @@ export default function LoginScreen() {
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.content}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.logoRow}>
             <View style={styles.logoCircle}>
               <Text style={styles.logoEmoji}>♻️</Text>
@@ -82,13 +74,32 @@ export default function LoginScreen() {
             <Text style={styles.appName}>TheKabadiwala</Text>
           </View>
 
-          <Text style={styles.title}>Welcome Back</Text>
+          <Text style={styles.title}>Create Account</Text>
           <Text style={styles.subtitle}>
-            Login to your account to continue
+            Sign up to start selling your scrap
           </Text>
 
+          <View style={styles.row}>
+            <View style={styles.half}>
+              <Input
+                placeholder="First Name *"
+                value={firstName}
+                onChangeText={setFirstName}
+              />
+            </View>
+            <View style={styles.half}>
+              <Input
+                placeholder="Last Name"
+                value={lastName}
+                onChangeText={setLastName}
+              />
+            </View>
+          </View>
+
+          <View style={{ height: 16 }} />
+
           <Input
-            placeholder="Email Address"
+            placeholder="Email Address *"
             keyboardType="email-address"
             autoCapitalize="none"
             value={email}
@@ -98,43 +109,38 @@ export default function LoginScreen() {
           <View style={{ height: 16 }} />
 
           <Input
-            placeholder="Password"
+            placeholder="Password *"
             secureTextEntry
             autoCapitalize="none"
             value={password}
             onChangeText={setPassword}
           />
 
+          <View style={{ height: 16 }} />
+
+          <Input
+            placeholder="Phone Number (Optional)"
+            keyboardType="phone-pad"
+            value={phone}
+            onChangeText={setPhone}
+          />
+
           <View style={{ height: 24 }} />
 
           <Button
-            label="Login"
-            onPress={handleLogin}
+            label="Register"
+            onPress={handleRegister}
             variant="primaryGreen"
             loading={loading}
           />
 
-          <View style={styles.registerContainer}>
-            <Text style={styles.registerText}>Don't have an account? </Text>
-            <Pressable onPress={() => router.push("/(auth)/register")}>
-              <Text style={styles.registerLink}>Register</Text>
+          <View style={styles.loginContainer}>
+            <Text style={styles.loginText}>Already have an account? </Text>
+            <Pressable onPress={() => router.back()}>
+              <Text style={styles.loginLink}>Login</Text>
             </Pressable>
           </View>
-
-          <Pressable style={styles.demoBanner} onPress={handleDemoLogin}>
-            <View style={styles.demoLeft}>
-              <Feather name="zap" size={16} color={colors.functional.warning} />
-              <Text style={styles.demoText}>
-                Demo Login — tap to test instantly
-              </Text>
-            </View>
-            <Feather
-              name="chevron-right"
-              size={16}
-              color={colors.functional.warning}
-            />
-          </Pressable>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -148,16 +154,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
   },
-  content: {
-    flex: 1,
+  scrollContent: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing["2xl"],
+    paddingTop: spacing.xl,
+    paddingBottom: spacing["3xl"],
   },
   logoRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    marginBottom: spacing["2xl"],
+    marginBottom: spacing.xl,
   },
   logoCircle: {
     width: 40,
@@ -181,41 +187,20 @@ const styles = StyleSheet.create({
     color: colors.neutral.gray600,
     marginBottom: spacing["2xl"],
   },
-  registerContainer: {
+  row: { flexDirection: "row", gap: spacing.md },
+  half: { flex: 1 },
+  loginContainer: {
     flexDirection: "row",
     justifyContent: "center",
     marginTop: spacing.xl,
   },
-  registerText: {
+  loginText: {
     ...typography.body,
     color: colors.neutral.gray600,
   },
-  registerLink: {
+  loginLink: {
     ...typography.body,
     color: colors.primary.green600,
     fontWeight: "600",
-  },
-  demoBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: spacing["2xl"],
-    padding: spacing.lg,
-    backgroundColor: "#FFF8E1",
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: "#FFE082",
-  },
-  demoLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    flex: 1,
-  },
-  demoText: {
-    ...typography.bodySm,
-    color: "#795548",
-    fontWeight: "500" as const,
-    flex: 1,
   },
 });
