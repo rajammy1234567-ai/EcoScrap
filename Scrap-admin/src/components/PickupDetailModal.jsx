@@ -96,7 +96,7 @@ export default function PickupDetailModal({ pickup, onClose, onUpdate }) {
               <div className="col-span-2">
                 <p className="text-sm text-gray-600">Pickup ID</p>
                 <p className="font-semibold text-gray-900 font-mono text-sm">
-                  {pickup.id}
+                  {pickup.displayId || pickup.id}
                 </p>
               </div>
               <div className="col-span-2">

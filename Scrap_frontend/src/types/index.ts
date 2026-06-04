@@ -59,6 +59,7 @@ export interface Pickup {
   created_at: string;
   createdAt?: string;          // backend may return camelCase
   adminNote?: string | null;   // set when cancelled
+  displayId?: string;
   address?: Record<string, any> | null; // populated by backend
   items: PickupItem[];
   image_urls: string[];

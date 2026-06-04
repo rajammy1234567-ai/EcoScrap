@@ -17,6 +17,7 @@ exports.createPickup = async (req, res) => {
         .status(400)
         .json({ success: false, message: "address_id and items are required" });
     }
+    const displayId = "PKG-" + Math.random().toString(36).substring(2, 8).toUpperCase();
     const pickup = await Pickup.create({
       user: req.user._id,
       address_id,
@@ -24,6 +25,7 @@ exports.createPickup = async (req, res) => {
       image_urls: image_urls ?? [],
       scheduled_at: scheduled_at ? new Date(scheduled_at) : undefined,
       notes,
+      displayId,
     });
     // normalize response to include `id` for frontend convenience
     const out = pickup.toObject ? pickup.toObject() : pickup;
@@ -52,10 +54,19 @@ exports.listPickups = async (req, res) => {
     }
 
     const pickups = await Pickup.find(filter).sort({ createdAt: -1 });
-    // Normalize each pickup to include `id` field
+
+    // Look up the user's addresses so we can attach address details
+    const User = require("../models/User");
+    const user = req.user ? await User.findById(req.user._id) : null;
+    const userAddresses = user?.addresses || [];
+
+    // Normalize each pickup to include `id` and `address` fields
     const normalized = pickups.map((p) => {
       const out = p.toObject ? p.toObject() : p;
       out.id = out._id;
+      if (out.address_id) {
+        out.address = userAddresses.find(a => a._id.toString() === out.address_id) || null;
+      }
       return out;
     });
     res.json({ success: true, pickups: normalized });
@@ -71,6 +82,15 @@ exports.getPickup = async (req, res) => {
       return res.status(404).json({ success: false, message: "Not found" });
     const out = pickup.toObject ? pickup.toObject() : pickup;
     out.id = out._id;
+    
+    // Attach address details
+    const User = require("../models/User");
+    const user = await User.findById(pickup.user);
+    if (user && user.addresses) {
+      const addr = user.addresses.find(a => a._id.toString() === pickup.address_id);
+      if (addr) out.address = addr;
+    }
+
     res.json({ success: true, pickup: out });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

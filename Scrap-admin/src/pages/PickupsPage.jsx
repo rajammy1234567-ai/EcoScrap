@@ -158,6 +158,7 @@ export function PickupsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
+                <th className="table-header">Pickup ID</th>
                 <th className="table-header">Date</th>
                 <th className="table-header">User</th>
                 <th className="table-header">Items</th>
@@ -168,6 +169,11 @@ export function PickupsPage() {
             <tbody>
               {pickups.map((pickup) => (
                 <tr key={pickup.id} className="hover:bg-gray-50 transition">
+                  <td className="table-cell">
+                    <span className="font-mono text-xs bg-green-50 text-green-700 px-2 py-1 rounded">
+                      {pickup.displayId || pickup.id?.toString().slice(0, 8).toUpperCase()}
+                    </span>
+                  </td>
                   <td className="table-cell text-sm">
                     {formatDate(pickup.createdAt)}
                   </td>

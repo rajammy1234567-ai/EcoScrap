@@ -14,7 +14,7 @@ export const pickupService = {
 
   get: (id: string) => api.get(`/api/v1/pickups/${id}`, { timeout: 15000 }),
 
-  cancel: (id: string) => api.put(`/api/v1/pickups/${id}/cancel`, null, { timeout: 15000 }),
+  cancel: (id: string) => api.put(`/api/v1/pickups/${id}/cancel`, {}, { timeout: 15000 }),
 
   uploadImage: async (uri: string) => {
     const formData = new FormData();

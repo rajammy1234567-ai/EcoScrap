@@ -14,6 +14,7 @@ const pickupSchema = new mongoose.Schema(
       default: "pending",
     },
     adminNote: { type: String },
+    displayId: { type: String },
   },
   { timestamps: true },
 );

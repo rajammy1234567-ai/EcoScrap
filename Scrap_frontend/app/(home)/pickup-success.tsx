@@ -16,11 +16,11 @@ export default function PickupSuccessScreen() {
   const router = useRouter();
 
   const pickup: Pickup | null = pickupJson ? JSON.parse(pickupJson) : null;
-  const displayId = pickupId
+  const displayId = pickup?.displayId || (pickupId
     ? pickupId.length > 8
       ? pickupId.slice(0, 8).toUpperCase()
       : pickupId.toUpperCase()
-    : null;
+    : null);
   const scheduledAtValue = pickup?.scheduled_at ?? scheduledAt;
   const scheduledLabel = scheduledAtValue
     ? new Date(scheduledAtValue).toLocaleString("en-IN", {
