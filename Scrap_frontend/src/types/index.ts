@@ -57,6 +57,9 @@ export interface Pickup {
   total_amount: number | null;
   notes: string | null;
   created_at: string;
+  createdAt?: string;          // backend may return camelCase
+  adminNote?: string | null;   // set when cancelled
+  address?: Record<string, any> | null; // populated by backend
   items: PickupItem[];
   image_urls: string[];
 }

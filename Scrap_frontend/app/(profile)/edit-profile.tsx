@@ -47,6 +47,7 @@ export default function EditProfileScreen() {
 
   const [firstName, setFirstName] = useState(user?.first_name ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
+  const [phone, setPhone] = useState(user?.phone ?? '');
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
@@ -60,6 +61,7 @@ export default function EditProfileScreen() {
       const res = await userService.updateProfile({
         first_name: firstName.trim(),
         email: email.trim() || undefined,
+        phone: phone.trim() || undefined,
       });
       setUser(res.data.user);
       router.back();
@@ -125,10 +127,12 @@ export default function EditProfileScreen() {
           <IconInput
             icon="phone"
             label="Phone Number"
-            value={user?.phone ?? ''}
-            editable={false}
+            value={phone}
+            onChange={setPhone}
+            editable={true}
+            placeholder="Enter your phone number"
+            keyboardType="phone-pad"
           />
-          <Text style={styles.helperText}>Phone number cannot be changed</Text>
 
           {/* Destructive actions */}
           <View style={styles.destructiveSection}>

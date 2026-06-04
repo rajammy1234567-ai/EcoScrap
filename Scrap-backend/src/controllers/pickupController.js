@@ -106,6 +106,9 @@ exports.cancelPickup = async (req, res) => {
     }
 
     pickup.status = "cancelled";
+    if (req.user.role !== "admin") {
+      pickup.adminNote = "User cancelled this pickup";
+    }
     await pickup.save();
 
     const out = pickup.toObject ? pickup.toObject() : pickup;

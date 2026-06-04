@@ -172,6 +172,29 @@ export default function HomeScreen() {
             </Animated.View>
           </Animated.View>
 
+          {/* Missing Phone Number Warning Banner */}
+          {!user?.phone && (
+            <Animated.View style={sectionStyle(1)}>
+              <Pressable
+                style={[styles.addressBannerWrapper, { marginBottom: spacing.md }]}
+                onPress={() => router.push('/(profile)/edit-profile')}
+              >
+                <LinearGradient
+                  colors={['#FFEFE5', '#FFE0CC']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.addressBannerInner}
+                >
+                  <View style={styles.addressLeft}>
+                    <Feather name="alert-circle" size={20} color="#E65100" />
+                    <Text style={[styles.addressBannerText, { color: '#E65100' }]}>Add your phone number for pickups</Text>
+                  </View>
+                  <Feather name="chevron-right" size={20} color="#E65100" />
+                </LinearGradient>
+              </Pressable>
+            </Animated.View>
+          )}
+
           {/* Add Address Banner */}
           <Animated.View style={sectionStyle(1)}>
             <Pressable

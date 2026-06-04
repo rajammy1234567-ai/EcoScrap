@@ -1,5 +1,5 @@
 require("dotenv").config();
-const express = require("express");
+const express = require("express"); // Restart nodemon
 const cors = require("cors");
 const connectDB = require("./src/config/database");
 const errorHandler = require("./src/middlewares/errorHandler");

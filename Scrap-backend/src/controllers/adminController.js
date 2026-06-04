@@ -206,7 +206,7 @@ exports.getAllPickups = async (req, res) => {
 
     const total = await Pickup.countDocuments(filter);
     const pickups = await Pickup.find(filter)
-      .populate("user", "name email phone")
+      .populate("user", "name email phone addresses")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit));
@@ -215,6 +215,9 @@ exports.getAllPickups = async (req, res) => {
     const normalized = pickups.map((p) => {
       const out = p.toObject ? p.toObject() : p;
       out.id = out._id;
+      if (out.user && out.user.addresses && out.address_id) {
+        out.address = out.user.addresses.find(a => a._id.toString() === out.address_id) || null;
+      }
       return out;
     });
 
@@ -234,7 +237,7 @@ exports.getPickupDetails = async (req, res) => {
   try {
     const pickup = await Pickup.findById(req.params.id).populate(
       "user",
-      "name email phone",
+      "name email phone addresses",
     );
     if (!pickup)
       return res
@@ -243,6 +246,9 @@ exports.getPickupDetails = async (req, res) => {
 
     const out = pickup.toObject ? pickup.toObject() : pickup;
     out.id = out._id;
+    if (out.user && out.user.addresses && out.address_id) {
+      out.address = out.user.addresses.find(a => a._id.toString() === out.address_id) || null;
+    }
     res.json({ success: true, pickup: out });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

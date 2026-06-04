@@ -2,12 +2,14 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import { storage } from './storage';
 
-// Detect if running on web or native
 
 
 // Web uses localhost; native (iOS/Android) uses local network IP
-const DEFAULT_URL ='https://ecoscrap-1.onrender.com';
-export const BASE_URL = DEFAULT_URL;
+const LOCAL_IP = '10.35.59.205';
+const DEV_URL = Platform.OS === 'web' ? 'http://localhost:5000' : `http://${LOCAL_IP}:5000`;
+const PROD_URL = 'https://ecoscrap-1.onrender.com';
+
+export const BASE_URL = __DEV__ ? DEV_URL : (process.env.EXPO_PUBLIC_API_URL?.replace('/api', '') || PROD_URL);
 
 export const api = axios.create({
   baseURL: BASE_URL,

@@ -93,10 +93,20 @@ export default function PickupDetailModal({ pickup, onClose, onUpdate }) {
                   {pickup.items?.length || 0}
                 </p>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Address ID</p>
+              <div className="col-span-2">
+                <p className="text-sm text-gray-600">Pickup ID</p>
+                <p className="font-semibold text-gray-900 font-mono text-sm">
+                  {pickup.id}
+                </p>
+              </div>
+              <div className="col-span-2">
+                <p className="text-sm text-gray-600">Address</p>
                 <p className="font-semibold text-gray-900">
-                  {pickup.address_id}
+                  {pickup.address ? (
+                    `${pickup.address.flat_number || ""}, ${pickup.address.locality || ""}, ${pickup.address.city || ""} - ${pickup.address.pincode || ""}`
+                  ) : (
+                    `Address ID: ${pickup.address_id} (Address not found)`
+                  )}
                 </p>
               </div>
             </div>

@@ -1,9 +1,9 @@
 import { api } from './api';
 
 export const userService = {
-  updateProfile: (data: { first_name?: string; last_name?: string; email?: string }) => {
+  updateProfile: (data: { first_name?: string; last_name?: string; email?: string; phone?: string }) => {
     const name = `${data.first_name || ''} ${data.last_name || ''}`.trim();
-    return api.put('/api/auth/profile', { name });
+    return api.put('/api/auth/profile', { name, phone: data.phone });
   },
 
   getAddresses: () => api.get('/api/v1/users/me/addresses'),

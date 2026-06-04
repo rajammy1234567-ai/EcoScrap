@@ -13,6 +13,7 @@ const pickupSchema = new mongoose.Schema(
       enum: ["pending", "accepted", "completed", "cancelled"],
       default: "pending",
     },
+    adminNote: { type: String },
   },
   { timestamps: true },
 );
