@@ -1,53 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, SectionList, TextInput,
-  Pressable, Image, ScrollView,
+  Pressable, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { scrapService } from '../../src/services/scrap';
-import { colors, spacing, typography, radii } from '../../src/theme';
+import { ScrapIcon } from '../../src/components/ui/ScrapIcon';
+import { SectionHeader } from '../../src/components/layout/SectionHeader';
+import { useTabBarInset } from '../../src/hooks/useTabBarInset';
+import { colors, spacing, typography, radii, shadows, layout } from '../../src/theme';
 
-// ─── 3D icon map ─────────────────────────────────────────────────────────────
-const ICONS: Record<string, any> = {
-  newspaper:   require('../../assets/images/brands/Untitled design/newspaper.png'),
-  cardboard:   require('../../assets/images/brands/Untitled design/cardboard.png'),
-  metal:       require('../../assets/images/brands/Untitled design/metal.png'),
-  laptop:      require('../../assets/images/brands/Untitled design/laptop.png'),
-  tv:          require('../../assets/images/brands/Untitled design/tv.png'),
-  'old tv':    require('../../assets/images/brands/Untitled design/old_tv.png'),
-  'crt tv':    require('../../assets/images/brands/Untitled design/old_tv.png'),
-  'crt monitor': require('../../assets/images/brands/Untitled design/old_tv.png'),
-  fridge:      require('../../assets/images/brands/Untitled design/fridge.png'),
-  ac:          require('../../assets/images/brands/Untitled design/ac.png'),
-  battery:     require('../../assets/images/brands/Untitled design/battery.png'),
-  'washing machine': require('../../assets/images/brands/Untitled design/washing machine.png'),
-  cpu:         require('../../assets/images/brands/Untitled design/cpu.png'),
-  computer:    require('../../assets/images/brands/Untitled design/cpu.png'),
-  printer:     require('../../assets/images/brands/Untitled design/printer.png'),
-  glass:       require('../../assets/images/brands/Untitled design/glass.png'),
-  bike:        require('../../assets/images/brands/Untitled design/bike.png'),
-  car:         require('../../assets/images/brands/Untitled design/car.png'),
-  cooker:      require('../../assets/images/brands/Untitled design/cooker.png'),
-  pipe:        require('../../assets/images/brands/Untitled design/pipe.png'),
-  radio:       require('../../assets/images/brands/Untitled design/radio.png'),
-  shirt:       require('../../assets/images/brands/Untitled design/tshirt.png'),
-  clothes:     require('../../assets/images/brands/Untitled design/tshirt.png'),
-  gym:         require('../../assets/images/brands/Untitled design/gym_equipments.png'),
-  scooter:     require('../../assets/images/brands/Untitled design/scooter.png'),
-  tablet:      require('../../assets/images/brands/Untitled design/tab.png'),
-};
-
-function getIcon(name: string): any | null {
-  const lower = name.toLowerCase();
-  for (const key of Object.keys(ICONS)) {
-    if (lower.includes(key)) return ICONS[key];
-  }
-  return null;
-}
-
-// ─── Fallback data ────────────────────────────────────────────────────────────
 const FALLBACK = [
   { title: 'IT-E Waste', data: [
     { name: 'CRT Monitor', rate_per_kg: 150, unit: 'Unit' },
@@ -80,6 +45,12 @@ const FALLBACK = [
   ]},
 ];
 
+const FEATURED = [
+  { name: 'Copper Wire', rate: 450, unit: 'Kg', tag: 'Highest' },
+  { name: 'Laptop', rate: 500, unit: 'Unit', tag: 'Popular' },
+  { name: 'Newspaper', rate: 14, unit: 'Kg', tag: 'Daily' },
+];
+
 export default function ScrapRatesScreen() {
   const router = useRouter();
   const [allSections, setAllSections] = useState(FALLBACK);
@@ -95,56 +66,67 @@ export default function ScrapRatesScreen() {
       .catch(() => {});
   }, []);
 
-  const filters = ['ALL', ...allSections.map(s => s.title)];
+  const filters = ['ALL', ...allSections.map((s) => s.title)];
+  const totalItems = allSections.reduce((n, s) => n + s.data.length, 0);
 
   const filteredSections = allSections
-    .filter(s => activeFilter === 'ALL' || s.title === activeFilter)
-    .map(s => ({
+    .filter((s) => activeFilter === 'ALL' || s.title === activeFilter)
+    .map((s) => ({
       ...s,
       data: search
         ? s.data.filter((i: any) => i.name.toLowerCase().includes(search.toLowerCase()))
         : s.data,
     }))
-    .filter(s => s.data.length > 0);
+    .filter((s) => s.data.length > 0);
 
-  return (
-    <SafeAreaView style={styles.safe}>
-      {/* Header */}
-      <Text style={styles.header}>SCRAP RATES</Text>
+  const bottomInset = useTabBarInset();
 
-      {/* Schedule Pickup CTA */}
-      <View style={styles.ctaRow}>
-        <Pressable style={styles.ctaBtn} onPress={() => router.push('/(home)/select-items')}>
-          <Text style={styles.ctaBtnText}>Schedule Pickup</Text>
-          <Text style={styles.ctaBtnPlus}> +</Text>
-        </Pressable>
+  const ListHeader = useCallback(() => (
+    <View style={styles.listHeader}>
+      <View style={styles.featuredCard}>
+        <SectionHeader title="Featured rates" subtitle="Best prices right now" />
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.featuredRow}
+        >
+          {FEATURED.map((f) => (
+            <View key={f.name} style={styles.featuredTile}>
+              <View style={styles.featuredTag}>
+                <Text style={styles.featuredTagText}>{f.tag}</Text>
+              </View>
+              <ScrapIcon name={f.name} variant="compact" size={16} />
+              <Text style={styles.featuredName} numberOfLines={1}>{f.name}</Text>
+              <Text style={styles.featuredRate}>
+                ₹{f.rate}<Text style={styles.featuredUnit}>/{f.unit}</Text>
+              </Text>
+            </View>
+          ))}
+        </ScrollView>
       </View>
 
-      {/* Search */}
       <View style={styles.searchRow}>
-        <Feather name="search" size={16} color={colors.neutral.gray400} />
+        <Feather name="search" size={18} color={colors.neutral.gray400} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search for items"
+          placeholder="Search newspaper, laptop, copper..."
           placeholderTextColor={colors.neutral.gray400}
           value={search}
           onChangeText={setSearch}
         />
         {!!search && (
-          <Pressable onPress={() => setSearch('')}>
-            <Feather name="x" size={16} color={colors.neutral.gray400} />
+          <Pressable onPress={() => setSearch('')} hitSlop={8}>
+            <Feather name="x-circle" size={18} color={colors.neutral.gray400} />
           </Pressable>
         )}
       </View>
 
-      {/* Filter chips */}
-      <View style={styles.filtersWrapper}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filtersRow}
       >
-        {filters.map(f => (
+        {filters.map((f) => (
           <Pressable
             key={f}
             style={[styles.filterChip, activeFilter === f && styles.filterChipActive]}
@@ -156,102 +138,216 @@ export default function ScrapRatesScreen() {
           </Pressable>
         ))}
       </ScrollView>
-      </View>
+    </View>
+  ), [search, filters, activeFilter]);
 
-      {/* List */}
+  return (
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <LinearGradient colors={[...layout.headerGradient]} style={styles.header}>
+        <Text style={styles.headerTitle}>Scrap Rates</Text>
+        <Text style={styles.headerSub}>{totalItems}+ items · Live market prices</Text>
+
+        <Pressable
+          style={styles.headerCta}
+          onPress={() => router.push('/(home)/select-items')}
+        >
+          <Feather name="plus" size={18} color={colors.neutral.white} />
+          <Text style={styles.headerCtaText}>Schedule Pickup</Text>
+        </Pressable>
+      </LinearGradient>
+
       <SectionList
+        style={styles.list}
         sections={filteredSections}
         keyExtractor={(item) => item.name}
-        contentContainerStyle={styles.list}
-        stickySectionHeadersEnabled={false}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: bottomInset },
+          filteredSections.length === 0 && styles.emptyListContent,
+        ]}
+        stickySectionHeadersEnabled
+        ListHeaderComponent={ListHeader}
         renderSectionHeader={({ section }) => (
-          <Text style={styles.sectionHead}>{section.title.toUpperCase()}</Text>
+          <View style={styles.sectionHeadWrap}>
+            <Text style={styles.sectionHead}>{section.title}</Text>
+            <Text style={styles.sectionCount}>{section.data.length} items</Text>
+          </View>
         )}
-        renderItem={({ item }) => {
-          const icon = getIcon(item.name);
-          return (
-            <View style={styles.itemCard}>
-              <View style={styles.itemIconBox}>
-                {icon ? (
-                  <Image source={icon} style={styles.itemIcon} resizeMode="contain" />
-                ) : (
-                  <Feather name="box" size={32} color={colors.neutral.gray400} />
-                )}
-              </View>
-              <View style={styles.itemInfo}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemRate}>
-                  ₹{item.rate_per_kg}/{item.unit ?? 'Kg'}
-                </Text>
-              </View>
+        renderItem={({ item }) => (
+          <View style={styles.itemCard}>
+            <ScrapIcon name={item.name} variant="filled" size={24} />
+            <View style={styles.itemInfo}>
+              <Text style={styles.itemName}>{item.name}</Text>
+              <Text style={styles.itemHint}>Doorstep pickup available</Text>
             </View>
-          );
-        }}
-        SectionSeparatorComponent={() => <View style={{ height: 4 }} />}
+            <View style={styles.rateBadge}>
+              <Text style={styles.itemRate}>₹{item.rate_per_kg}</Text>
+              <Text style={styles.itemUnit}>/{item.unit ?? 'Kg'}</Text>
+            </View>
+          </View>
+        )}
+        ListEmptyComponent={
+          <View style={styles.noResults}>
+            <Feather name="search" size={32} color={colors.neutral.gray400} />
+            <Text style={styles.noResultsText}>
+              {search ? `No items found for "${search}"` : 'No rates available'}
+            </Text>
+          </View>
+        }
+        showsVerticalScrollIndicator={false}
       />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.neutral.gray100 },
+  safe: { flex: 1, backgroundColor: layout.screenBg },
   header: {
-    fontSize: 18, fontWeight: '700' as const, letterSpacing: 2,
-    color: colors.neutral.black, textAlign: 'center',
-    paddingTop: spacing.lg, paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing['2xl'],
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '800' as const,
+    color: colors.neutral.white,
+  },
+  headerSub: {
+    ...typography.caption,
+    color: 'rgba(255,255,255,0.75)',
+    marginTop: 4,
+  },
+  headerCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.neutral.black,
+    borderRadius: radii.lg,
+    height: 48,
+    marginTop: spacing.lg,
+  },
+  headerCtaText: {
+    ...typography.bodySmMedium,
+    fontWeight: '700' as const,
+    color: colors.neutral.white,
+  },
+  list: {
+    flex: 1,
+    marginTop: -spacing.lg,
+  },
+  listContent: {
+    paddingHorizontal: spacing.lg,
+    flexGrow: 1,
+  },
+  emptyListContent: {
+    flexGrow: 1,
+  },
+  listHeader: {
+    gap: spacing.sm,
+    paddingBottom: spacing.sm,
+  },
+  featuredCard: {
     backgroundColor: colors.neutral.white,
+    borderRadius: radii.xl,
+    padding: spacing.lg,
+    ...shadows.sm,
   },
-  ctaRow: { paddingHorizontal: spacing.xl, paddingVertical: spacing.md, backgroundColor: colors.neutral.white },
-  ctaBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.neutral.black, borderRadius: 50, height: 48,
+  featuredRow: { gap: spacing.sm },
+  featuredTile: {
+    width: 120,
+    backgroundColor: colors.primary.green50,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.primary.green100,
+    alignItems: 'center',
+    gap: 4,
   },
-  ctaBtnText: { fontSize: 16, fontWeight: '700' as const, color: colors.neutral.white },
-  ctaBtnPlus: { fontSize: 18, fontWeight: '700' as const, color: colors.neutral.white },
-
+  featuredTag: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primary.green600,
+    borderRadius: radii.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  featuredTagText: {
+    fontSize: 9,
+    fontWeight: '700' as const,
+    color: colors.neutral.white,
+    textTransform: 'uppercase',
+  },
+  featuredName: {
+    ...typography.caption,
+    fontWeight: '600' as const,
+    color: colors.neutral.black,
+    textAlign: 'center',
+  },
+  featuredRate: {
+    fontSize: 16,
+    fontWeight: '800' as const,
+    color: colors.primary.green700,
+  },
+  featuredUnit: { fontSize: 11, fontWeight: '500' as const },
   searchRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    marginHorizontal: spacing.xl, marginVertical: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     backgroundColor: colors.neutral.white,
-    borderRadius: radii.lg, paddingHorizontal: spacing.lg, height: 44,
-    borderWidth: 1, borderColor: colors.neutral.gray200,
+    borderRadius: radii.xl,
+    paddingHorizontal: spacing.lg,
+    height: 50,
+    ...shadows.sm,
   },
   searchInput: { flex: 1, ...typography.bodySm, color: colors.neutral.black },
-
-  filtersWrapper: { zIndex: 10, backgroundColor: colors.neutral.gray100 },
-  filtersRow: { paddingHorizontal: spacing.xl, gap: spacing.sm, paddingBottom: spacing.md },
+  filtersRow: {
+    gap: spacing.sm,
+    paddingBottom: spacing.xs,
+  },
   filterChip: {
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
-    borderRadius: radii.pill, borderWidth: 1.5, borderColor: colors.neutral.gray200,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.pill,
     backgroundColor: colors.neutral.white,
+    borderWidth: 1,
+    borderColor: colors.neutral.gray200,
   },
   filterChipActive: {
-    backgroundColor: colors.primary.green600, borderColor: colors.primary.green600,
+    backgroundColor: colors.neutral.black,
+    borderColor: colors.neutral.black,
   },
-  filterLabel: { ...typography.bodySmMedium, color: colors.neutral.gray600 },
+  filterLabel: { ...typography.caption, fontWeight: '600' as const, color: colors.neutral.gray600 },
   filterLabelActive: { color: colors.neutral.white },
-
-  list: { paddingHorizontal: spacing.xl, paddingBottom: 100 },
+  sectionHeadWrap: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: layout.screenBg,
+    paddingVertical: spacing.sm,
+    paddingTop: spacing.md,
+  },
   sectionHead: {
-    ...typography.caption, color: colors.neutral.gray400,
-    fontWeight: '600' as const, letterSpacing: 1.5,
-    paddingVertical: spacing.sm, marginTop: spacing.md,
+    ...typography.bodySmMedium,
+    fontWeight: '700' as const,
+    color: colors.neutral.black,
   },
+  sectionCount: { ...typography.caption, color: colors.neutral.gray400 },
   itemCard: {
-    flexDirection: 'row', alignItems: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.neutral.white,
-    borderRadius: radii.lg, marginBottom: spacing.sm,
+    borderRadius: radii.xl,
+    marginBottom: spacing.sm,
     padding: spacing.md,
-    borderWidth: 1, borderColor: colors.neutral.gray100,
+    gap: spacing.md,
+    ...shadows.sm,
   },
-  itemIconBox: {
-    width: 72, height: 72, borderRadius: radii.md,
-    backgroundColor: colors.neutral.gray100,
-    alignItems: 'center', justifyContent: 'center',
-    marginRight: spacing.lg,
-  },
-  itemIcon: { width: 56, height: 56 },
-  itemInfo: { flex: 1 },
+  itemInfo: { flex: 1, minWidth: 0 },
   itemName: { ...typography.bodySmMedium, color: colors.neutral.black, lineHeight: 20 },
-  itemRate: { ...typography.bodySmMedium, color: colors.primary.green600, marginTop: 4, fontSize: 15 },
+  itemHint: { ...typography.caption, color: colors.neutral.gray400, marginTop: 2 },
+  rateBadge: { alignItems: 'flex-end', flexShrink: 0 },
+  itemRate: { fontSize: 16, fontWeight: '800' as const, color: colors.primary.green700 },
+  itemUnit: { ...typography.caption, color: colors.neutral.gray400 },
+  noResults: { alignItems: 'center', paddingTop: spacing['2xl'], gap: spacing.md },
+  noResultsText: { ...typography.bodySm, color: colors.neutral.gray600 },
 });

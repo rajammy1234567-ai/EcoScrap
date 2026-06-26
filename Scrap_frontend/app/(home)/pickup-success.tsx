@@ -1,10 +1,11 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Button } from "../../src/components/ui/Button";
-import { colors, radii, spacing, typography } from "../../src/theme";
+import { AppImages } from "../../src/assets/images";
+import { colors, radii, spacing, typography, shadows } from "../../src/theme";
 import { Pickup } from "../../src/types";
 
 export default function PickupSuccessScreen() {
@@ -38,6 +39,17 @@ export default function PickupSuccessScreen() {
         colors={["#E8F5E9", "#FFFFFF"]}
         style={styles.heroGradient}
       >
+        <View style={styles.successImageWrap}>
+          <Image
+            source={AppImages.bannerDoorstep}
+            style={styles.successImage}
+            resizeMode="cover"
+          />
+          <LinearGradient
+            colors={["transparent", "rgba(232,245,233,0.95)"]}
+            style={styles.successImageFade}
+          />
+        </View>
         <View style={styles.iconCircle}>
           <Feather name="check" size={48} color={colors.neutral.white} />
         </View>
@@ -111,6 +123,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.xl,
+  },
+  successImageWrap: {
+    width: "100%",
+    height: 160,
+    borderRadius: radii.xl,
+    overflow: "hidden",
+    marginBottom: spacing.xl,
+    ...shadows.md,
+  },
+  successImage: { width: "100%", height: "100%" },
+  successImageFade: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 60,
   },
   iconCircle: {
     width: 96,

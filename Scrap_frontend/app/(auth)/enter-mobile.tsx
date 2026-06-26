@@ -5,17 +5,16 @@ import {
   StyleSheet,
   Alert,
   Pressable,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { Input } from "../../src/components/ui/Input";
 import { Button } from "../../src/components/ui/Button";
+import { AuthScreenShell } from "../../src/components/auth/AuthScreenShell";
 import { useAuth } from "../../src/context/AuthContext";
 import { authService } from "../../src/services/auth";
-import { colors, radii, spacing, typography } from "../../src/theme";
+import { AppImages } from "../../src/assets/images";
+import { colors, radii, spacing, typography, shadows } from "../../src/theme";
 
 const DEMO_USER = {
   id: "demo-user-001",
@@ -26,6 +25,12 @@ const DEMO_USER = {
   referral_code: "DEMO123",
   category: "individual",
 };
+
+const PERKS = [
+  { icon: "truck", text: "Free doorstep pickup" },
+  { icon: "dollar-sign", text: "Instant cash" },
+  { icon: "shield", text: "Verified weight" },
+] as const;
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -62,160 +67,133 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.skipRow}>
-        <Button
-          label="Skip"
-          onPress={() => router.replace("/(tabs)/home")}
-          variant="skipPill"
-        />
-      </View>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <View style={styles.content}>
-          <View style={styles.logoRow}>
-            <View style={styles.logoCircle}>
-              <Text style={styles.logoEmoji}>♻️</Text>
+    <AuthScreenShell
+      title="Welcome back"
+      subtitle="Sign in to schedule pickups and track earnings"
+      heroImage={AppImages.heroOnboarding}
+      onSkip={() => router.replace("/(tabs)/home")}
+      scroll
+      footer={
+        <View style={styles.perks}>
+          {PERKS.map((p) => (
+            <View key={p.icon} style={styles.perk}>
+              <Feather name={p.icon} size={12} color={colors.primary.green600} />
+              <Text style={styles.perkText}>{p.text}</Text>
             </View>
-            <Text style={styles.appName}>TheKabadiwala</Text>
-          </View>
-
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>
-            Login to your account to continue
-          </Text>
-
-          <Input
-            placeholder="Email Address"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={email}
-            onChangeText={setEmail}
-          />
-
-          <View style={{ height: 16 }} />
-
-          <Input
-            placeholder="Password"
-            secureTextEntry
-            autoCapitalize="none"
-            value={password}
-            onChangeText={setPassword}
-          />
-
-          <View style={{ height: 24 }} />
-
-          <Button
-            label="Login"
-            onPress={handleLogin}
-            variant="primaryGreen"
-            loading={loading}
-          />
-
-          <View style={styles.registerContainer}>
-            <Text style={styles.registerText}>Don't have an account? </Text>
-            <Pressable onPress={() => router.push("/(auth)/register")}>
-              <Text style={styles.registerLink}>Register</Text>
-            </Pressable>
-          </View>
-
-          <Pressable style={styles.demoBanner} onPress={handleDemoLogin}>
-            <View style={styles.demoLeft}>
-              <Feather name="zap" size={16} color={colors.functional.warning} />
-              <Text style={styles.demoText}>
-                Demo Login — tap to test instantly
-              </Text>
-            </View>
-            <Feather
-              name="chevron-right"
-              size={16}
-              color={colors.functional.warning}
-            />
-          </Pressable>
+          ))}
         </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      }
+    >
+      <Input
+        label="Email"
+        placeholder="you@email.com"
+        leftIcon="mail"
+        keyboardType="email-address"
+        autoCapitalize="none"
+        value={email}
+        onChangeText={setEmail}
+      />
+
+      <Input
+        label="Password"
+        placeholder="Enter your password"
+        leftIcon="lock"
+        secureTextEntry
+        autoCapitalize="none"
+        value={password}
+        onChangeText={setPassword}
+      />
+
+      <Button
+        label="Sign In"
+        onPress={handleLogin}
+        variant="primaryDark"
+        loading={loading}
+        style={styles.primaryBtn}
+      />
+
+      <View style={styles.registerRow}>
+        <Text style={styles.registerText}>New here? </Text>
+        <Pressable onPress={() => router.push("/(auth)/register")}>
+          <Text style={styles.registerLink}>Create account</Text>
+        </Pressable>
+      </View>
+
+      <Pressable style={styles.demoCard} onPress={handleDemoLogin}>
+        <View style={styles.demoIcon}>
+          <Feather name="zap" size={18} color={colors.functional.warning} />
+        </View>
+        <View style={styles.demoTextCol}>
+          <Text style={styles.demoTitle}>Try demo mode</Text>
+          <Text style={styles.demoSub}>Explore the app without signing up</Text>
+        </View>
+        <Feather name="arrow-right" size={18} color={colors.neutral.gray400} />
+      </Pressable>
+    </AuthScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.neutral.white },
-  flex: { flex: 1 },
-  skipRow: {
-    alignItems: "flex-end",
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing["2xl"],
-  },
-  logoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    marginBottom: spacing["2xl"],
-  },
-  logoCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primary.green50,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  logoEmoji: { fontSize: 20 },
-  appName: { ...typography.h3, color: colors.primary.green600 },
-  title: {
-    fontSize: 28,
-    fontWeight: "700" as const,
-    color: colors.neutral.black,
-    lineHeight: 36,
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.neutral.gray600,
-    marginBottom: spacing["2xl"],
-  },
-  registerContainer: {
+  primaryBtn: { marginTop: spacing.sm, ...shadows.md },
+  registerRow: {
     flexDirection: "row",
     justifyContent: "center",
     marginTop: spacing.xl,
   },
-  registerText: {
-    ...typography.body,
-    color: colors.neutral.gray600,
-  },
+  registerText: { ...typography.bodySm, color: colors.neutral.gray600 },
   registerLink: {
-    ...typography.body,
+    ...typography.bodySm,
     color: colors.primary.green600,
-    fontWeight: "600",
+    fontWeight: "700" as const,
   },
-  demoBanner: {
+  demoCard: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: spacing["2xl"],
+    gap: spacing.md,
+    marginTop: spacing.xl,
     padding: spacing.lg,
-    backgroundColor: "#FFF8E1",
-    borderRadius: radii.lg,
+    backgroundColor: colors.functional.warningBg,
+    borderRadius: radii.xl,
     borderWidth: 1,
     borderColor: "#FFE082",
   },
-  demoLeft: {
+  demoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.lg,
+    backgroundColor: colors.neutral.white,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  demoTextCol: { flex: 1 },
+  demoTitle: {
+    ...typography.bodySmMedium,
+    fontWeight: "700" as const,
+    color: colors.neutral.black,
+  },
+  demoSub: { ...typography.caption, color: colors.neutral.gray600, marginTop: 2 },
+  perks: {
+    flexDirection: "row",
+    justifyContent: "center",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.neutral.gray100,
+  },
+  perk: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
-    flex: 1,
+    gap: 4,
+    backgroundColor: colors.primary.green50,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radii.pill,
   },
-  demoText: {
-    ...typography.bodySm,
-    color: "#795548",
-    fontWeight: "500" as const,
-    flex: 1,
+  perkText: {
+    fontSize: 10,
+    fontWeight: "600" as const,
+    color: colors.primary.green700,
   },
 });

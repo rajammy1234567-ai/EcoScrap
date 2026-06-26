@@ -7,7 +7,6 @@ import {
   Pressable,
   Alert,
   Platform,
-  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect, useLocalSearchParams } from "expo-router";
@@ -16,31 +15,11 @@ import { useAuth } from "../../src/context/AuthContext";
 import { userService } from "../../src/services/user";
 import { scrapService } from "../../src/services/scrap";
 import { pickupService } from "../../src/services/pickup";
-import { colors, radii, spacing, typography } from "../../src/theme";
+import { ScrapIcon } from "../../src/components/ui/ScrapIcon";
+import { StepProgress } from "../../src/components/layout/StepProgress";
+import { SectionHeader } from "../../src/components/layout/SectionHeader";
+import { colors, radii, spacing, typography, shadows, layout } from "../../src/theme";
 import { Address, ScrapCategory } from "../../src/types";
-
-// ── 3D category icons ─────────────────────────────────────────────────────────
-const CAT_ICONS: Record<string, any> = {
-  paper: require("../../assets/images/brands/Untitled design/newspaper.png"),
-  metal: require("../../assets/images/brands/Untitled design/metal.png"),
-  metals: require("../../assets/images/brands/Untitled design/metal.png"),
-  "e-waste": require("../../assets/images/brands/Untitled design/laptop.png"),
-  ewaste: require("../../assets/images/brands/Untitled design/laptop.png"),
-  carton: require("../../assets/images/brands/Untitled design/cardboard.png"),
-  plastic: require("../../assets/images/brands/Untitled design/cardboard.png"),
-  glass: require("../../assets/images/brands/Untitled design/glass.png"),
-  clothes: require("../../assets/images/brands/Untitled design/tshirt.png"),
-  appliance: require("../../assets/images/brands/Untitled design/fridge.png"),
-  others: require("../../assets/images/brands/Untitled design/battery.png"),
-};
-
-function getCatIcon(name: string): any | null {
-  const lower = name.toLowerCase();
-  for (const key of Object.keys(CAT_ICONS)) {
-    if (lower.includes(key)) return CAT_ICONS[key];
-  }
-  return null;
-}
 
 const TIME_SLOTS = [
   { label: "2:30 PM to 4:30 PM", hour: 14, minute: 30 },
@@ -320,31 +299,36 @@ export default function SelectItemsScreen() {
     }
   };
 
+  const estimatedEarning = selectedCats.size > 0
+    ? `₹${WEIGHTS[selectedWeightIdx].qty * 8}+ est.`
+    : null;
+
   return (
     <SafeAreaView style={styles.safe}>
-      {/* Header */}
       <View style={styles.header}>
-        <Pressable
-          style={styles.backBtn}
-          onPress={() => router.back()}
-          hitSlop={10}
-        >
+        <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={10}>
           <Feather name="arrow-left" size={22} color={colors.neutral.black} />
         </Pressable>
-        <Text style={styles.headerTitle}>Schedule Pickup</Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Schedule Pickup</Text>
+          <Text style={styles.headerSub}>Free doorstep collection</Text>
+        </View>
         <View style={{ width: 40 }} />
       </View>
+
+      <StepProgress
+        current={2}
+        total={3}
+        labels={["Address", "Details", "Confirm"]}
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
-        {/* ── Time ─────────────────────────────────────────────────────────── */}
-        <View style={styles.sectionRow}>
-          <Feather name="clock" size={16} color={colors.neutral.black} />
-          <Text style={styles.sectionLabel}>Time</Text>
-        </View>
-        <View style={styles.chipRow}>
+        <View style={styles.card}>
+          <SectionHeader title="Pickup time" subtitle="Choose a convenient slot" />
+          <View style={styles.chipRow}>
           {TIME_SLOTS.map((s, i) => (
             <Pressable
               key={i}
@@ -361,14 +345,12 @@ export default function SelectItemsScreen() {
               </Text>
             </Pressable>
           ))}
+          </View>
         </View>
 
-        {/* ── Estimated Weight ─────────────────────────────────────────────── */}
-        <View style={styles.sectionRow}>
-          <Feather name="package" size={16} color={colors.neutral.black} />
-          <Text style={styles.sectionLabel}>Estimated Weight</Text>
-        </View>
-        <View style={styles.chipRow}>
+        <View style={styles.card}>
+          <SectionHeader title="Estimated weight" subtitle="Helps us assign the right vehicle" />
+          <View style={styles.chipRow}>
           {WEIGHTS.map((w, i) => (
             <Pressable
               key={i}
@@ -388,33 +370,15 @@ export default function SelectItemsScreen() {
               </Text>
             </Pressable>
           ))}
+          </View>
         </View>
 
-        {/* ── Address ──────────────────────────────────────────────────────── */}
-        <View style={[styles.sectionRow, styles.sectionRowSpaced]}>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: spacing.sm,
-            }}
-          >
-            <Feather name="map-pin" size={16} color={colors.neutral.black} />
-            <Text style={styles.sectionLabel}>Address</Text>
-          </View>
-          <Pressable onPress={() => router.push("/(location)/add-address")}>
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-            >
-              <Feather
-                name="edit-2"
-                size={12}
-                color={colors.primary.green600}
-              />
-              <Text style={styles.changeLink}>Change</Text>
-            </View>
-          </Pressable>
-        </View>
+        <View style={styles.card}>
+          <SectionHeader
+            title="Pickup address"
+            actionLabel="Change"
+            onAction={() => router.push("/(location)/add-address")}
+          />
 
         {!isAuthenticated ? (
           <Pressable
@@ -460,17 +424,17 @@ export default function SelectItemsScreen() {
             </Text>
           </View>
         )}
-
-        {/* ── Select Categories ─────────────────────────────────────────────── */}
-        <View style={styles.sectionRow}>
-          <Feather name="grid" size={16} color={colors.neutral.black} />
-          <Text style={styles.sectionLabel}>Select Categories</Text>
         </View>
-        <Text style={styles.sectionSub}>What type of scrap do you have?</Text>
 
-        <View style={styles.catGrid}>
+        <View style={styles.card}>
+          <SectionHeader
+            title="Scrap categories"
+            subtitle="Select all that apply"
+            actionLabel="Rates"
+            onAction={() => router.push("/(tabs)/scrap-rates" as any)}
+          />
+          <View style={styles.catGrid}>
           {categories.map((cat) => {
-            const icon = getCatIcon(cat.name);
             const isActive = selectedCats.has(cat.id);
             return (
               <Pressable
@@ -478,21 +442,12 @@ export default function SelectItemsScreen() {
                 style={[styles.catChip, isActive && styles.catChipActive]}
                 onPress={() => toggleCat(cat.id)}
               >
-                {icon ? (
-                  <Image
-                    source={icon}
-                    style={styles.catIcon}
-                    resizeMode="contain"
-                  />
-                ) : (
-                  <Feather
-                    name="box"
-                    size={28}
-                    color={
-                      isActive ? colors.neutral.white : colors.neutral.gray400
-                    }
-                  />
-                )}
+                <ScrapIcon
+                  name={cat.name}
+                  variant="filled"
+                  size={28}
+                  active={isActive}
+                />
                 <Text
                   style={[styles.catLabel, isActive && styles.catLabelActive]}
                   numberOfLines={2}
@@ -502,55 +457,38 @@ export default function SelectItemsScreen() {
               </Pressable>
             );
           })}
-        </View>
-
-        {/* ── View Rate List ────────────────────────────────────────────────── */}
-        <Pressable
-          style={styles.rateLink}
-          onPress={() => router.push("/(tabs)/scrap-rates" as any)}
-        >
-          <View style={styles.rateLinkRow}>
-            <Image
-              source={require("../../assets/images/brands/Untitled design/newspaper.png")}
-              style={styles.rateLinkIcon}
-              resizeMode="contain"
-            />
-            <Image
-              source={require("../../assets/images/brands/Untitled design/metal.png")}
-              style={styles.rateLinkIcon}
-              resizeMode="contain"
-            />
-            <Image
-              source={require("../../assets/images/brands/Untitled design/laptop.png")}
-              style={styles.rateLinkIcon}
-              resizeMode="contain"
-            />
-            <Text style={styles.rateLinkText}>View Rate List</Text>
-            <Feather
-              name="arrow-right"
-              size={14}
-              color={colors.primary.green600}
-            />
           </View>
-        </Pressable>
+        </View>
       </ScrollView>
 
-      {/* ── Complete Pickup CTA ───────────────────────────────────────────── */}
       <View style={styles.ctaWrap}>
+        {estimatedEarning && (
+          <View style={styles.estimateRow}>
+            <Text style={styles.estimateLabel}>Estimated earning</Text>
+            <Text style={styles.estimateValue}>{estimatedEarning}</Text>
+          </View>
+        )}
         <Pressable
           style={[styles.ctaBtn, !!loading && { opacity: 0.7 }]}
           onPress={handleSubmit}
           disabled={!!loading}
         >
-          <Text style={styles.ctaBtnText}>
-            {loading ? "Scheduling..." : "COMPLETE PICKUP"}
-          </Text>
+          <View>
+            <Text style={styles.ctaBtnText}>
+              {loading ? "Scheduling..." : "Confirm Pickup"}
+            </Text>
+            {!loading && (
+              <Text style={styles.ctaBtnSub}>
+                {selectedCats.size > 0
+                  ? `${selectedCats.size} categories · ${TIME_SLOTS[selectedSlotIdx].label}`
+                  : "Select categories to continue"}
+              </Text>
+            )}
+          </View>
           {!loading && (
-            <Feather
-              name="arrow-right"
-              size={20}
-              color={colors.neutral.white}
-            />
+            <View style={styles.ctaArrow}>
+              <Feather name="arrow-right" size={20} color={colors.neutral.white} />
+            </View>
           )}
         </Pressable>
       </View>
@@ -559,13 +497,14 @@ export default function SelectItemsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.neutral.white },
+  safe: { flex: 1, backgroundColor: layout.screenBg },
 
   header: {
     flexDirection: "row",
     alignItems: "center",
-    height: 56,
     paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.neutral.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.neutral.gray100,
   },
@@ -575,38 +514,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  headerCenter: { flex: 1, alignItems: "center" },
   headerTitle: {
-    flex: 1,
     ...typography.h3,
     color: colors.neutral.black,
-    textAlign: "center",
+  },
+  headerSub: {
+    ...typography.caption,
+    color: colors.neutral.gray400,
   },
 
-  content: { padding: spacing.xl, paddingBottom: 110 },
+  content: { padding: spacing.lg, paddingBottom: 130, gap: spacing.md },
 
-  sectionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    marginTop: spacing.xl,
-    marginBottom: spacing.md,
-  },
-  sectionRowSpaced: { justifyContent: "space-between" },
-  sectionLabel: {
-    ...typography.bodySmMedium,
-    color: colors.neutral.black,
-    fontWeight: "600" as const,
-  },
-  sectionSub: {
-    ...typography.caption,
-    color: colors.neutral.gray600,
-    marginBottom: spacing.md,
-    marginTop: -spacing.xs,
-  },
-  changeLink: {
-    ...typography.caption,
-    color: colors.primary.green600,
-    fontWeight: "600" as const,
+  card: {
+    backgroundColor: colors.neutral.white,
+    borderRadius: radii.xl,
+    padding: spacing.lg,
+    ...shadows.sm,
   },
 
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
@@ -616,7 +540,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     borderWidth: 1.5,
     borderColor: colors.neutral.gray200,
-    backgroundColor: colors.neutral.white,
+    backgroundColor: colors.neutral.gray100,
   },
   chipActive: {
     backgroundColor: colors.primary.green600,
@@ -663,11 +587,11 @@ const styles = StyleSheet.create({
   },
   catChip: {
     width: "30%",
-    aspectRatio: 0.9,
+    aspectRatio: 0.85,
     borderRadius: radii.lg,
     borderWidth: 1.5,
     borderColor: colors.neutral.gray200,
-    backgroundColor: colors.neutral.white,
+    backgroundColor: colors.neutral.gray100,
     alignItems: "center",
     justifyContent: "center",
     padding: spacing.sm,
@@ -677,7 +601,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary.green600,
     borderColor: colors.primary.green600,
   },
-  catIcon: { width: 44, height: 44 },
   catLabel: {
     ...typography.caption,
     color: colors.neutral.gray600,
@@ -685,40 +608,53 @@ const styles = StyleSheet.create({
   },
   catLabelActive: { color: colors.neutral.white, fontWeight: "600" as const },
 
-  rateLink: {
-    marginTop: spacing.xl,
-    padding: spacing.lg,
-    borderRadius: radii.lg,
-    backgroundColor: colors.neutral.gray100,
-  },
-  rateLinkRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  rateLinkIcon: { width: 26, height: 26 },
-  rateLinkText: {
-    flex: 1,
-    ...typography.bodySmMedium,
-    color: colors.primary.green600,
-  },
-
   ctaWrap: {
-    padding: spacing.xl,
-    paddingBottom: Platform.OS === "ios" ? 32 : spacing.xl,
+    padding: spacing.lg,
+    paddingBottom: Platform.OS === "ios" ? 32 : spacing.lg,
     backgroundColor: colors.neutral.white,
     borderTopWidth: 1,
     borderTopColor: colors.neutral.gray100,
+    ...shadows.lg,
+  },
+  estimateRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.xs,
+  },
+  estimateLabel: { ...typography.caption, color: colors.neutral.gray600 },
+  estimateValue: {
+    ...typography.bodySmMedium,
+    fontWeight: "800" as const,
+    color: colors.primary.green700,
   },
   ctaBtn: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
     backgroundColor: colors.neutral.black,
-    borderRadius: radii.pill,
-    height: 56,
-    gap: spacing.md,
+    borderRadius: radii.xl,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    minHeight: 64,
   },
   ctaBtnText: {
     fontSize: 16,
     fontWeight: "700" as const,
     color: colors.neutral.white,
-    letterSpacing: 0.5,
+  },
+  ctaBtnSub: {
+    ...typography.caption,
+    color: "rgba(255,255,255,0.6)",
+    marginTop: 2,
+  },
+  ctaArrow: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary.green600,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

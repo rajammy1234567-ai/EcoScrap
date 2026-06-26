@@ -11,8 +11,8 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.thekabadiwala.app",
-      "buildNumber": "1",
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "TheKabadiwala needs camera access to take photos of your scrap items for pickup.",
         "NSPhotoLibraryUsageDescription": "TheKabadiwala needs photo library access to attach pictures of your scrap items.",
         "NSLocationWhenInUseUsageDescription": "TheKabadiwala needs location access to find scrap collectors near you.",

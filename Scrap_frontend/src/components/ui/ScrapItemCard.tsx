@@ -1,26 +1,23 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { ScrapItem } from '../../types';
-import { colors, radii, spacing, typography } from '../../theme';
+import { ScrapIcon } from './ScrapIcon';
+import { colors, radii, shadows, spacing, typography } from '../../theme';
 
 interface Props {
   item: ScrapItem;
   selected: boolean;
   onToggle: () => void;
-  iconSource?: any;
 }
 
-export function ScrapItemCard({ item, selected, onToggle, iconSource }: Props) {
+export function ScrapItemCard({ item, selected, onToggle }: Props) {
   return (
-    <Pressable style={styles.card} onPress={onToggle}>
-      <View style={styles.iconBox}>
-        {iconSource ? (
-          <Image source={iconSource} style={{ width: 48, height: 48 }} resizeMode="contain" />
-        ) : (
-          <Feather name="box" size={32} color={colors.neutral.gray400} />
-        )}
-      </View>
+    <Pressable
+      style={[styles.card, selected && styles.cardSelected]}
+      onPress={onToggle}
+    >
+      <ScrapIcon name={item.name} variant="filled" size={26} active={selected} />
       <View style={styles.content}>
         <Text style={styles.name}>{item.name}</Text>
         <Text style={styles.rate}>₹{item.rate_per_kg}/{item.unit}</Text>
@@ -41,23 +38,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.neutral.white,
     borderWidth: 1,
-    borderColor: colors.neutral.gray200,
-    borderRadius: radii.md,
+    borderColor: colors.primary.green100,
+    borderRadius: radii.xl,
     padding: spacing.md,
     marginBottom: spacing.md,
+    ...shadows.sm,
   },
-  iconBox: {
-    width: 56,
-    height: 56,
-    borderRadius: radii.md,
-    backgroundColor: colors.neutral.gray100,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
+  cardSelected: {
+    borderColor: colors.primary.green600,
+    backgroundColor: colors.primary.green50,
   },
-  content: { flex: 1 },
+  content: { flex: 1, marginLeft: spacing.md },
   name: { ...typography.bodySmMedium, color: colors.neutral.black, marginBottom: 2 },
-  rate: { ...typography.bodySm, color: colors.neutral.gray600 },
+  rate: { ...typography.bodySm, color: colors.primary.green600, fontWeight: '600' as const },
   guideline: { ...typography.caption, color: colors.functional.warning, marginTop: 2 },
   checkbox: {
     width: 24,

@@ -4,7 +4,8 @@ import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../../src/context/AuthContext";
-import { colors, radii, spacing, typography } from "../../src/theme";
+import { useTabBarInset } from "../../src/hooks/useTabBarInset";
+import { colors, radii, spacing, typography, layout, shadows } from "../../src/theme";
 
 function MenuRow({
   icon,
@@ -47,6 +48,7 @@ export default function ProfileScreen() {
   const contactInfo = user?.phone
     ? "XXXXXX" + user.phone.slice(-4)
     : user?.email || "Not logged in";
+  const bottomInset = useTabBarInset();
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -61,7 +63,7 @@ export default function ProfileScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { paddingBottom: bottomInset }]}
       >
         {/* Avatar section */}
         <LinearGradient
@@ -134,7 +136,7 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.neutral.gray100 },
+  safe: { flex: 1, backgroundColor: layout.screenBg },
   backBtn: {
     width: 44,
     height: 44,
@@ -143,7 +145,7 @@ const styles = StyleSheet.create({
     marginLeft: spacing.md,
     marginTop: spacing.sm,
   },
-  scroll: { paddingBottom: 100 },
+  scroll: {},
 
   avatarSection: {
     alignItems: "center",
@@ -199,11 +201,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutral.white,
     borderRadius: radii.xl,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    ...shadows.sm,
   },
   row: {
     flexDirection: "row",

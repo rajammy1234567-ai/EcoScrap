@@ -14,6 +14,7 @@ export const colors = {
     gray400: '#9E9E9E',
     gray200: '#E0E0E0',
     gray100: '#F5F5F5',
+    gray50: '#EBEBEB',
     white: '#FFFFFF',
   },
   functional: {
@@ -62,18 +63,41 @@ export const radii = {
 
 import { Platform } from 'react-native';
 
+export const layout = {
+  screenBg: '#EBEBEB',
+  cardBg: '#FFFFFF',
+  headerGradient: ['#1B5E20', '#2E7D32'] as const,
+};
+
+/** Floating tab bar dimensions — keep in sync with app/(tabs)/_layout.tsx */
+export const tabBar = {
+  height: 50,
+  bottomOffset: Platform.select({ ios: 12, android: 8, default: 8 })!,
+  horizontalInset: 12,
+  borderRadius: 25,
+  iconSize: 20,
+  scrollExtra: 12,
+};
+
+export const surfaces = {
+  card: '#FFFFFF',
+  elevated: '#FFFFFF',
+  muted: '#F3F4F3',
+  accent: '#E8F5E9',
+};
+
 export const shadows = {
   sm: Platform.select({
-    web: { boxShadow: '0px 1px 2px rgba(0,0,0,0.05)' },
-    default: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 },
+    web: { boxShadow: '0px 1px 3px rgba(27,94,32,0.06)' },
+    default: { shadowColor: '#1B5E20', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3, elevation: 1 },
   })!,
   md: Platform.select({
-    web: { boxShadow: '0px 2px 8px rgba(0,0,0,0.08)' },
-    default: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
+    web: { boxShadow: '0px 4px 16px rgba(27,94,32,0.08)' },
+    default: { shadowColor: '#1B5E20', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4 },
   })!,
   lg: Platform.select({
-    web: { boxShadow: '0px 4px 12px rgba(0,0,0,0.15)' },
-    default: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 5 },
+    web: { boxShadow: '0px 8px 24px rgba(27,94,32,0.12)' },
+    default: { shadowColor: '#1B5E20', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 20, elevation: 8 },
   })!,
   nav: Platform.select({
     web: { boxShadow: '0px -1px 4px rgba(0,0,0,0.05)' },

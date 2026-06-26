@@ -5,70 +5,87 @@ import {
   StyleSheet,
   FlatList,
   Pressable,
-  Image,
   RefreshControl,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { PickupCard } from "../../src/components/ui/PickupCard";
 import { pickupService } from "../../src/services/pickup";
 import { useAuth } from "../../src/context/AuthContext";
 import { Pickup } from "../../src/types";
-import { colors, spacing, typography, radii } from "../../src/theme";
-
-const TRUCK_IMG = require("../../assets/images/brands/Gemini_Generated_Image_czpogxczpogxczpo.png");
+import { SegmentedControl } from "../../src/components/layout/SegmentedControl";
+import { Button } from "../../src/components/ui/Button";
+import { AppImages } from "../../src/assets/images";
+import { useTabBarInset } from "../../src/hooks/useTabBarInset";
+import { colors, spacing, typography, radii, shadows, layout } from "../../src/theme";
 
 type Tab = "pending" | "completed" | "cancelled";
 
-const TABS: { key: Tab; label: string; icon: string }[] = [
-  { key: "pending", label: "Scheduled", icon: "truck" },
-  { key: "completed", label: "Completed", icon: "check-square" },
-  { key: "cancelled", label: "Cancelled", icon: "trash-2" },
+const TABS: { key: Tab; label: string }[] = [
+  { key: "pending", label: "Scheduled" },
+  { key: "completed", label: "Completed" },
+  { key: "cancelled", label: "Cancelled" },
 ];
 
-const EMPTY_MESSAGES: Record<Tab, { title: string; sub: string }> = {
+const EMPTY_MESSAGES: Record<Tab, { title: string; sub: string; icon: string }> = {
   pending: {
     title: "No scheduled pickups",
-    sub: "Your recyclables deserve a second life!",
+    sub: "Book a free doorstep pickup and turn your scrap into cash today.",
+    icon: "calendar",
   },
   completed: {
-    title: "No completed pickups",
-    sub: "Schedule one and earn cash!",
+    title: "No completed pickups yet",
+    sub: "Your pickup history and earnings will show up here.",
+    icon: "check-circle",
   },
   cancelled: {
     title: "No cancelled pickups",
-    sub: "Great job keeping them active!",
+    sub: "All your bookings are on track. Great!",
+    icon: "slash",
   },
 };
 
 export default function RequestsScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{
-    pickupId?: string;
-    pickupJson?: string;
-  }>();
-  const pickupId = params.pickupId;
-  const pickupJson = params.pickupJson;
+  const params = useLocalSearchParams<{ pickupId?: string; pickupJson?: string }>();
+  const { pickupId, pickupJson } = params;
   const { isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("pending");
   const [pickups, setPickups] = useState<Pickup[]>([]);
+  const [counts, setCounts] = useState({ pending: 0, completed: 0, cancelled: 0 });
+  const [totalEarnings, setTotalEarnings] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(
     async (tab: Tab) => {
       if (!isAuthenticated) {
         setPickups([]);
+        setCounts({ pending: 0, completed: 0, cancelled: 0 });
         return;
       }
       try {
-        const statusMap: Record<Tab, string> = {
-          pending: "pending",
-          completed: "completed",
-          cancelled: "cancelled",
+        const [pendingRes, completedRes, cancelledRes] = await Promise.all([
+          pickupService.list({ status: "pending" }),
+          pickupService.list({ status: "completed" }),
+          pickupService.list({ status: "cancelled" }),
+        ]);
+        const statusMap: Record<Tab, Pickup[]> = {
+          pending: pendingRes.data.pickups ?? [],
+          completed: completedRes.data.pickups ?? [],
+          cancelled: cancelledRes.data.pickups ?? [],
         };
-        const res = await pickupService.list({ status: statusMap[tab] });
-        setPickups(res.data.pickups ?? []);
+        setCounts({
+          pending: statusMap.pending.length,
+          completed: statusMap.completed.length,
+          cancelled: statusMap.cancelled.length,
+        });
+        setTotalEarnings(
+          statusMap.completed.reduce((sum, p) => sum + (p.total_amount ?? 0), 0),
+        );
+        setPickups(statusMap[tab]);
       } catch {
         setPickups([]);
       } finally {
@@ -77,218 +94,243 @@ export default function RequestsScreen() {
     },
     [isAuthenticated],
   );
-  useEffect(() => {
-    load(activeTab);
-  }, [activeTab, load]);
+
+  useEffect(() => { load(activeTab); }, [activeTab, load]);
 
   useEffect(() => {
     if (!pickupId) return;
-
-    // Defer navigation slightly to avoid navigating before the root layout mounts.
     const t = setTimeout(() => {
       router.push({
         pathname: "/(requests)/detail",
-        params: {
-          id: pickupId,
-          pickupJson,
-        },
+        params: { id: pickupId, pickupJson },
       });
     }, 50);
-
     return () => clearTimeout(t);
   }, [pickupId, pickupJson, router]);
 
-  const handleTabChange = (tab: Tab) => {
-    setActiveTab(tab);
-    load(tab);
-  };
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    load(activeTab);
-  };
+  const empty = EMPTY_MESSAGES[activeTab];
+  const bottomInset = useTabBarInset();
 
   return (
-    <SafeAreaView style={styles.safe}>
-      {/* Header */}
-      <Text style={styles.header}>PICKUPS</Text>
+    <SafeAreaView style={styles.safe} edges={["top"]}>
+      <LinearGradient
+        colors={[...layout.headerGradient]}
+        style={styles.header}
+      >
+        <Text style={styles.headerTitle}>My Pickups</Text>
+        <Text style={styles.headerSub}>Track, manage & earn from your scrap</Text>
 
-      {/* Tabs */}
-      <View style={styles.tabs}>
-        {TABS.map((t) => (
-          <Pressable
-            key={t.key}
-            style={styles.tab}
-            onPress={() => handleTabChange(t.key)}
-          >
-            <Feather
-              name={t.icon as any}
-              size={28}
-              color={
-                activeTab === t.key
-                  ? colors.primary.green600
-                  : colors.neutral.gray400
+        <View style={styles.statsRow}>
+          <View style={styles.statBox}>
+            <Text style={styles.statNum}>{counts.pending}</Text>
+            <Text style={styles.statLabel}>Scheduled</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statBox}>
+            <Text style={styles.statNum}>{counts.completed}</Text>
+            <Text style={styles.statLabel}>Completed</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statBox}>
+            <Text style={styles.statNum}>{totalEarnings > 0 ? `₹${totalEarnings}` : "—"}</Text>
+            <Text style={styles.statLabel}>Earnings</Text>
+          </View>
+        </View>
+      </LinearGradient>
+
+      <View style={styles.body}>
+        <SegmentedControl
+          tabs={TABS.map((t) => ({
+            key: t.key,
+            label: t.label,
+            count: counts[t.key],
+          }))}
+          active={activeTab}
+          onChange={(tab) => {
+            setActiveTab(tab);
+            load(tab);
+          }}
+        />
+
+        <Pressable
+          style={styles.scheduleBtn}
+          onPress={() => router.push("/(home)/select-items")}
+        >
+          <View style={styles.scheduleLeft}>
+            <Feather name="plus-circle" size={22} color={colors.neutral.white} />
+            <View>
+              <Text style={styles.scheduleTitle}>Schedule new pickup</Text>
+              <Text style={styles.scheduleSub}>Free doorstep · Instant cash</Text>
+            </View>
+          </View>
+          <Feather name="arrow-right" size={20} color={colors.neutral.white} />
+        </Pressable>
+
+        {pickups.length > 0 && (
+          <Text style={styles.listMeta}>
+            {pickups.length} pickup{pickups.length !== 1 ? "s" : ""}
+          </Text>
+        )}
+
+        <FlatList
+          data={pickups}
+          keyExtractor={(p) => p.id}
+          style={styles.list}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: bottomInset },
+            pickups.length === 0 && styles.emptyList,
+          ]}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => { setRefreshing(true); load(activeTab); }}
+              colors={[colors.primary.green600]}
+            />
+          }
+          renderItem={({ item }) => (
+            <PickupCard
+              pickup={item}
+              onPress={() =>
+                router.push({
+                  pathname: "/(requests)/detail",
+                  params: { id: item.id, pickupJson: JSON.stringify(item) },
+                })
               }
             />
-            <Text
-              style={[
-                styles.tabLabel,
-                activeTab === t.key && styles.tabLabelActive,
-              ]}
-            >
-              {t.label}
-            </Text>
-            {activeTab === t.key && <View style={styles.tabUnderline} />}
-          </Pressable>
-        ))}
+          )}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <View style={styles.emptyImageWrap}>
+                <Image
+                  source={AppImages.emptyPickup}
+                  style={styles.emptyImage}
+                  resizeMode="cover"
+                />
+              </View>
+              <Text style={styles.emptyTitle}>{empty.title}</Text>
+              <Text style={styles.emptySub}>{empty.sub}</Text>
+              {!isAuthenticated ? (
+                <Button
+                  label="Login to continue"
+                  onPress={() => router.push("/(auth)/enter-mobile")}
+                  variant="primaryGreen"
+                  style={styles.emptyCta}
+                />
+              ) : activeTab === "pending" ? (
+                <Button
+                  label="Schedule Pickup"
+                  onPress={() => router.push("/(home)/select-items")}
+                  variant="primaryGreen"
+                  style={styles.emptyCta}
+                />
+              ) : null}
+            </View>
+          }
+        />
       </View>
-
-      {/* Schedule Pickup CTA */}
-      <View style={styles.ctaRow}>
-        <View style={styles.ctaGlowRing}>
-          <Pressable
-            style={styles.ctaBtn}
-            onPress={() => router.push("/(home)/select-items")}
-          >
-            <Text style={styles.ctaBtnText}>Schedule Pickup</Text>
-            <Text style={styles.ctaBtnPlus}> +</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      {/* List */}
-      <FlatList
-        data={pickups}
-        keyExtractor={(p) => p.id}
-        contentContainerStyle={[
-          styles.list,
-          pickups.length === 0 && styles.emptyList,
-        ]}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            colors={[colors.primary.green600]}
-          />
-        }
-        renderItem={({ item }) => (
-          <PickupCard
-            pickup={item}
-            onPress={() =>
-              router.push({
-                pathname: "/(requests)/detail",
-                params: { id: item.id, pickupJson: JSON.stringify(item) },
-              })
-            }
-          />
-        )}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Image
-              source={TRUCK_IMG}
-              style={styles.emptyImg}
-              resizeMode="contain"
-            />
-            <Text style={styles.emptyTitle}>
-              {EMPTY_MESSAGES[activeTab].title}
-            </Text>
-            <Text style={styles.emptySub}>{EMPTY_MESSAGES[activeTab].sub}</Text>
-          </View>
-        }
-      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.neutral.white },
+  safe: { flex: 1, backgroundColor: layout.screenBg },
   header: {
-    fontSize: 18,
-    fontWeight: "700" as const,
-    letterSpacing: 2,
-    color: colors.neutral.black,
-    textAlign: "center",
+    paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing['2xl'],
   },
-  tabs: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.neutral.gray100,
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "800" as const,
+    color: colors.neutral.white,
   },
-  tab: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: spacing.md,
-    position: "relative",
-  },
-  tabLabel: {
+  headerSub: {
     ...typography.caption,
-    color: colors.neutral.gray400,
+    color: "rgba(255,255,255,0.75)",
     marginTop: 4,
-    textTransform: "capitalize",
   },
-  tabLabelActive: {
-    color: colors.primary.green600,
+  statsRow: {
+    flexDirection: "row",
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderRadius: radii.xl,
+    marginTop: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  statBox: { flex: 1, alignItems: "center" },
+  statNum: {
+    fontSize: 18,
+    fontWeight: "800" as const,
+    color: colors.neutral.white,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: "rgba(255,255,255,0.7)",
+    marginTop: 2,
     fontWeight: "600" as const,
   },
-  tabUnderline: {
-    position: "absolute",
-    bottom: 0,
-    left: 16,
-    right: 16,
-    height: 2,
-    backgroundColor: colors.primary.green600,
-    borderRadius: 1,
+  statDivider: {
+    width: 1,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    marginVertical: 4,
   },
-  ctaRow: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xl,
-    alignItems: "center",
+  body: {
+    flex: 1,
+    marginTop: -spacing.lg,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
   },
-  ctaGlowRing: {
-    width: "100%",
-    borderRadius: 50,
-    padding: 3,
-    backgroundColor: colors.primary.green100,
-  },
-  ctaBtn: {
+  scheduleBtn: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
     backgroundColor: colors.neutral.black,
-    borderRadius: 50,
-    height: 52,
+    borderRadius: radii.xl,
+    padding: spacing.lg,
+    ...shadows.md,
   },
-  ctaBtnText: {
-    fontSize: 17,
+  scheduleLeft: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  scheduleTitle: {
+    ...typography.bodySmMedium,
     fontWeight: "700" as const,
     color: colors.neutral.white,
   },
-  ctaBtnPlus: {
-    fontSize: 20,
-    fontWeight: "700" as const,
-    color: colors.neutral.white,
+  scheduleSub: { ...typography.caption, color: "rgba(255,255,255,0.6)" },
+  listMeta: {
+    ...typography.caption,
+    color: colors.neutral.gray600,
+    fontWeight: "600" as const,
+    marginTop: spacing.xs,
   },
-  list: { paddingHorizontal: spacing.xl, paddingBottom: 96 },
-  emptyList: { flex: 1 },
+  list: { flex: 1 },
+  listContent: { gap: spacing.sm },
+  emptyList: { flexGrow: 1 },
   emptyState: {
-    flex: 1,
     alignItems: "center",
-    justifyContent: "center",
-    paddingTop: spacing["4xl"],
+    paddingTop: spacing["3xl"],
+    paddingHorizontal: spacing.xl,
   },
-  emptyImg: { width: 280, height: 220, marginBottom: spacing["2xl"] },
+  emptyImageWrap: {
+    width: "100%",
+    height: 180,
+    borderRadius: radii.xl,
+    overflow: "hidden",
+    marginBottom: spacing.lg,
+    ...shadows.md,
+  },
+  emptyImage: { width: "100%", height: "100%" },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "700" as const,
     color: colors.neutral.black,
     textAlign: "center",
   },
   emptySub: {
-    ...typography.body,
-    color: colors.neutral.gray400,
+    ...typography.bodySm,
+    color: colors.neutral.gray600,
     textAlign: "center",
     marginTop: spacing.sm,
+    lineHeight: 20,
   },
+  emptyCta: { marginTop: spacing.xl, alignSelf: "stretch" },
 });

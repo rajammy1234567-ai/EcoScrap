@@ -5,23 +5,20 @@ import {
   StyleSheet,
   Alert,
   Pressable,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Feather } from "@expo/vector-icons";
 import { Input } from "../../src/components/ui/Input";
 import { Button } from "../../src/components/ui/Button";
+import { AuthScreenShell } from "../../src/components/auth/AuthScreenShell";
 import { useAuth } from "../../src/context/AuthContext";
 import { authService } from "../../src/services/auth";
-import { colors, radii, spacing, typography } from "../../src/theme";
+import { AppImages } from "../../src/assets/images";
+import { colors, spacing, typography, shadows } from "../../src/theme";
 
 export default function RegisterScreen() {
   const router = useRouter();
   const { login } = useAuth();
-  
+
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -34,7 +31,7 @@ export default function RegisterScreen() {
       Alert.alert("Error", "First Name, Email, and Password are required.");
       return;
     }
-    
+
     setLoading(true);
     try {
       const name = `${firstName} ${lastName}`.trim();
@@ -54,153 +51,109 @@ export default function RegisterScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.skipRow}>
-        <Button
-          label="Skip"
-          onPress={() => router.replace("/(tabs)/home")}
-          variant="skipPill"
-        />
+    <AuthScreenShell
+      title="Create account"
+      subtitle="Join thousands earning from home scrap"
+      heroImage={AppImages.bannerDoorstep}
+      onBack={() => router.back()}
+      onSkip={() => router.replace("/(tabs)/home")}
+      scroll
+    >
+      <View style={styles.nameRow}>
+        <View style={styles.half}>
+          <Input
+            label="First name"
+            placeholder="First name"
+            leftIcon="user"
+            value={firstName}
+            onChangeText={setFirstName}
+            required
+          />
+        </View>
+        <View style={styles.half}>
+          <Input
+            label="Last name"
+            placeholder="Last name"
+            leftIcon="user"
+            value={lastName}
+            onChangeText={setLastName}
+          />
+        </View>
       </View>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.logoRow}>
-            <View style={styles.logoCircle}>
-              <Text style={styles.logoEmoji}>♻️</Text>
-            </View>
-            <Text style={styles.appName}>TheKabadiwala</Text>
-          </View>
 
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>
-            Sign up to start selling your scrap
-          </Text>
+      <Input
+        label="Email"
+        placeholder="you@email.com"
+        leftIcon="mail"
+        keyboardType="email-address"
+        autoCapitalize="none"
+        value={email}
+        onChangeText={setEmail}
+        required
+      />
 
-          <View style={styles.row}>
-            <View style={styles.half}>
-              <Input
-                placeholder="First Name *"
-                value={firstName}
-                onChangeText={setFirstName}
-              />
-            </View>
-            <View style={styles.half}>
-              <Input
-                placeholder="Last Name"
-                value={lastName}
-                onChangeText={setLastName}
-              />
-            </View>
-          </View>
+      <Input
+        label="Password"
+        placeholder="Min. 6 characters"
+        leftIcon="lock"
+        secureTextEntry
+        autoCapitalize="none"
+        value={password}
+        onChangeText={setPassword}
+        required
+      />
 
-          <View style={{ height: 16 }} />
+      <Input
+        label="Phone"
+        placeholder="10-digit mobile (optional)"
+        leftIcon="phone"
+        keyboardType="phone-pad"
+        value={phone}
+        onChangeText={setPhone}
+      />
 
-          <Input
-            placeholder="Email Address *"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={email}
-            onChangeText={setEmail}
-          />
+      <Button
+        label="Create Account"
+        onPress={handleRegister}
+        variant="primaryDark"
+        loading={loading}
+        style={styles.primaryBtn}
+      />
 
-          <View style={{ height: 16 }} />
+      <View style={styles.loginRow}>
+        <Text style={styles.loginText}>Already have an account? </Text>
+        <Pressable onPress={() => router.back()}>
+          <Text style={styles.loginLink}>Sign in</Text>
+        </Pressable>
+      </View>
 
-          <Input
-            placeholder="Password *"
-            secureTextEntry
-            autoCapitalize="none"
-            value={password}
-            onChangeText={setPassword}
-          />
-
-          <View style={{ height: 16 }} />
-
-          <Input
-            placeholder="Phone Number (Optional)"
-            keyboardType="phone-pad"
-            value={phone}
-            onChangeText={setPhone}
-          />
-
-          <View style={{ height: 24 }} />
-
-          <Button
-            label="Register"
-            onPress={handleRegister}
-            variant="primaryGreen"
-            loading={loading}
-          />
-
-          <View style={styles.loginContainer}>
-            <Text style={styles.loginText}>Already have an account? </Text>
-            <Pressable onPress={() => router.back()}>
-              <Text style={styles.loginLink}>Login</Text>
-            </Pressable>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      <Text style={styles.legal}>
+        By continuing, you agree to our Terms of Service and Privacy Policy.
+      </Text>
+    </AuthScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.neutral.white },
-  flex: { flex: 1 },
-  skipRow: {
-    alignItems: "flex-end",
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-  },
-  scrollContent: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing["3xl"],
-  },
-  logoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    marginBottom: spacing.xl,
-  },
-  logoCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primary.green50,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  logoEmoji: { fontSize: 20 },
-  appName: { ...typography.h3, color: colors.primary.green600 },
-  title: {
-    fontSize: 28,
-    fontWeight: "700" as const,
-    color: colors.neutral.black,
-    lineHeight: 36,
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.neutral.gray600,
-    marginBottom: spacing["2xl"],
-  },
-  row: { flexDirection: "row", gap: spacing.md },
+  nameRow: { flexDirection: "row", gap: spacing.md },
   half: { flex: 1 },
-  loginContainer: {
+  primaryBtn: { marginTop: spacing.sm, ...shadows.md },
+  loginRow: {
     flexDirection: "row",
     justifyContent: "center",
     marginTop: spacing.xl,
   },
-  loginText: {
-    ...typography.body,
-    color: colors.neutral.gray600,
-  },
+  loginText: { ...typography.bodySm, color: colors.neutral.gray600 },
   loginLink: {
-    ...typography.body,
+    ...typography.bodySm,
     color: colors.primary.green600,
-    fontWeight: "600",
+    fontWeight: "700" as const,
+  },
+  legal: {
+    ...typography.caption,
+    color: colors.neutral.gray400,
+    textAlign: "center",
+    marginTop: spacing.lg,
+    lineHeight: 18,
   },
 });

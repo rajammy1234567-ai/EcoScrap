@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TextInputProps } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { colors, radii, spacing, typography } from '../../theme';
 
 interface Props extends TextInputProps {
@@ -7,9 +8,10 @@ interface Props extends TextInputProps {
   error?: string;
   required?: boolean;
   phonePrefix?: boolean;
+  leftIcon?: string;
 }
 
-export function Input({ label, error, required, phonePrefix, style, ...rest }: Props) {
+export function Input({ label, error, required, phonePrefix, leftIcon, style, ...rest }: Props) {
   const [focused, setFocused] = useState(false);
 
   return (
@@ -27,6 +29,14 @@ export function Input({ label, error, required, phonePrefix, style, ...rest }: P
           error ? styles.fieldError : undefined,
         ]}
       >
+        {leftIcon && (
+          <Feather
+            name={leftIcon as any}
+            size={18}
+            color={focused ? colors.primary.green600 : colors.neutral.gray400}
+            style={styles.leftIcon}
+          />
+        )}
         {phonePrefix && (
           <View style={styles.prefixBox}>
             <Text style={styles.prefix}>+91</Text>
@@ -53,14 +63,18 @@ const styles = StyleSheet.create({
   field: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 52,
+    height: 54,
     backgroundColor: colors.neutral.gray100,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.neutral.gray200,
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
   },
-  fieldFocused: { borderColor: colors.primary.green600, backgroundColor: colors.neutral.white },
+  fieldFocused: {
+    borderColor: colors.primary.green600,
+    backgroundColor: colors.neutral.white,
+  },
+  leftIcon: { marginRight: spacing.sm },
   fieldError: { borderColor: colors.functional.error, backgroundColor: colors.neutral.white },
   prefixBox: { flexDirection: 'row', alignItems: 'center', marginRight: spacing.md },
   prefix: { ...typography.body, color: colors.neutral.black, fontWeight: '500' },
