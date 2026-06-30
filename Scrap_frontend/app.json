@@ -72,11 +72,9 @@
     },
     "extra": {
       "router": {},
-      "googlePlacesApiKey": "",
-      "eas": {
-        "projectId": "a1cabad3-7e5a-4ecc-b31c-c1b543915d62"
-      }
+      "googlePlacesApiKey": ""
+      
     },
-    "owner": "viz_eas001"
+    "owner": "vizi_kids_eas_001"
   }
 }
