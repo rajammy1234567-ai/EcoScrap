@@ -2,7 +2,7 @@
   "expo": {
     "name": "TheKabadiwala",
     "slug": "thekabadiwala",
-    "version": "1.0.0",
+    "version": "3.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "thekabadiwala",
@@ -21,7 +21,7 @@
     },
     "android": {
       "package": "com.thekabadiwala.app",
-      "versionCode": 1,
+      "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
@@ -72,8 +72,10 @@
     },
     "extra": {
       "router": {},
-      "googlePlacesApiKey": ""
-      
+      "googlePlacesApiKey": "",
+      "eas": {
+        "projectId": "b6a8d931-8434-4008-a3f2-d1aae41a314a"
+      }
     },
     "owner": "vizi_kids_eas_001"
   }
