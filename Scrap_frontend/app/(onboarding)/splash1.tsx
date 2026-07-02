@@ -39,7 +39,7 @@ export default function Splash1Screen() {
         <View style={styles.topBar}>
           <View style={styles.brandBadge}>
             <Feather name="refresh-cw" size={14} color={colors.primary.green200} />
-            <Text style={styles.brand}>TheKabadiwala</Text>
+            <Text style={styles.brand}>Eco Scrap</Text>
           </View>
           <Pressable style={styles.skipBtn} onPress={handleSkip}>
             <Text style={styles.skipText}>Skip</Text>

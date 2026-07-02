@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "TheKabadiwala",
+    "name": "Eco Scrap",
     "slug": "thekabadiwala",
-    "version": "3.0.0",
+    "version": "3.1.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/app/eco_icon_512.png",
     "scheme": "thekabadiwala",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
@@ -13,20 +13,19 @@
       "bundleIdentifier": "com.thekabadiwala.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "TheKabadiwala needs camera access to take photos of your scrap items for pickup.",
-        "NSPhotoLibraryUsageDescription": "TheKabadiwala needs photo library access to attach pictures of your scrap items.",
-        "NSLocationWhenInUseUsageDescription": "TheKabadiwala needs location access to find scrap collectors near you.",
-        "NSLocationAlwaysUsageDescription": "TheKabadiwala needs location access to find scrap collectors near you."
+        "NSCameraUsageDescription": "Eco Scrap needs camera access to take photos of your scrap items for pickup.",
+        "NSPhotoLibraryUsageDescription": "Eco Scrap needs photo library access to attach pictures of your scrap items.",
+        "NSLocationWhenInUseUsageDescription": "Eco Scrap needs location access to find scrap collectors near you.",
+        "NSLocationAlwaysUsageDescription": "Eco Scrap needs location access to find scrap collectors near you."
       }
     },
     "android": {
       "package": "com.thekabadiwala.app",
-      "versionCode": 3,
+      "label": "Eco Scrap",
+      "versionCode": 4,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png",
-        "backgroundColor": "#E8F5E9"
+        "foregroundImage": "./assets/images/app/eco_icon_512.png",
+        "backgroundColor": "#FFFFFF"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -45,7 +44,7 @@
     },
     "web": {
       "output": "single",
-      "favicon": "./assets/images/favicon.png",
+      "favicon": "./assets/images/app/eco_icon_512.png",
       "bundler": "metro"
     },
     "plugins": [
@@ -53,7 +52,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/app/eco_icon_512.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
@@ -62,8 +61,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "TheKabadiwala needs access to your photos to attach scrap item images.",
-          "cameraPermission": "TheKabadiwala needs camera access to take photos of your scrap items."
+          "photosPermission": "Eco Scrap needs access to your photos to attach scrap item images.",
+          "cameraPermission": "Eco Scrap needs camera access to take photos of your scrap items."
         }
       ]
     ],

@@ -8,12 +8,12 @@ export default function IndexScreen() {
       <View style={styles.content}>
         <View style={styles.logoRing}>
           <Image
-            source={require('../assets/images/icon.png')}
+            source={require('../assets/images/app/eco_icon_512.png')}
             style={styles.logo}
             resizeMode="contain"
           />
         </View>
-        <Text style={styles.brand}>TheKabadiwala</Text>
+        <Text style={styles.brand}>Eco Scrap</Text>
         <Text style={styles.tagline}>Scrap pickup · Instant cash</Text>
         <ActivityIndicator
           size="small"

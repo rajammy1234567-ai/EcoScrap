@@ -61,7 +61,7 @@ export function AuthScreenShell({
             <View style={styles.roundBtnPlaceholder} />
           )}
           <View style={styles.brandChip}>
-            <Text style={styles.brandText}>TheKabadiwala</Text>
+            <Text style={styles.brandText}>Eco Scrap</Text>
           </View>
           {onSkip ? (
             <Pressable style={styles.skipBtn} onPress={onSkip}>

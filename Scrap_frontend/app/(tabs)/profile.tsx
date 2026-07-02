@@ -127,7 +127,7 @@ export default function ProfileScreen() {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerApp}>TheKabadiwala</Text>
+          <Text style={styles.footerApp}>Eco Scrap</Text>
           <Text style={styles.footerVersion}>Version 1.0.0</Text>
         </View>
       </ScrollView>

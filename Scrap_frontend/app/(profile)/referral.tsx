@@ -50,7 +50,7 @@ export default function ReferralScreen() {
   };
 
   const handleShare = async () => {
-    await Share.share({ message: `Use my referral code ${info?.referral_code} on TheKabadiwala app and earn money by selling scrap!` });
+    await Share.share({ message: `Use my referral code ${info?.referral_code} on Eco Scrap app and earn money by selling scrap!` });
   };
 
   return (

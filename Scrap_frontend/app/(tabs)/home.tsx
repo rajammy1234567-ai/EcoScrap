@@ -130,7 +130,7 @@ export default function HomeScreen() {
         >
           <View style={styles.topRow}>
             <View>
-              <Text style={styles.brand}>TheKabadiwala</Text>
+              <Text style={styles.brand}>Eco Scrap</Text>
               <Text style={styles.greeting}>{getGreeting()}, {name}</Text>
             </View>
             <View style={styles.topActions}>

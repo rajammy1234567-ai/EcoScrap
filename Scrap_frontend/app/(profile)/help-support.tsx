@@ -5,7 +5,7 @@ import { Header } from '../../src/components/shared/Header';
 import { colors, spacing, typography, radii } from '../../src/theme';
 
 const SUPPORT_PHONE = '+919876543210';
-const WHATSAPP_URL = `https://wa.me/${SUPPORT_PHONE.replace('+', '')}?text=Hi%2C%20I%20need%20help%20with%20TheKabadiwala`;
+const WHATSAPP_URL = `https://wa.me/${SUPPORT_PHONE.replace('+', '')}?text=Hi%2C%20I%20need%20help%20with%20Eco%20Scrap`;
 
 function ContactRow({ icon, label, subtitle, onPress }: {
   icon: string; label: string; subtitle: string; onPress: () => void;
