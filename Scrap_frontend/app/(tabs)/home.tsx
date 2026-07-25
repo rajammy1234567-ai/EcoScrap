@@ -12,7 +12,6 @@ import { useAuth } from '../../src/context/AuthContext';
 import { userService } from '../../src/services/user';
 import { pickupService } from '../../src/services/pickup';
 import { SectionHeader } from '../../src/components/layout/SectionHeader';
-import { LiveUsersStrip } from '../../src/components/live/LiveUsersStrip';
 import { ScrapIcon } from '../../src/components/ui/ScrapIcon';
 import { ONBOARDING_CATEGORIES } from '../../src/utils/scrapIcons';
 import { Address, Pickup } from '../../src/types';
@@ -248,11 +247,6 @@ export default function HomeScreen() {
                 <View key={i} style={[styles.promoDot, i === activePromo && styles.promoDotActive]} />
               ))}
             </View>
-          </View>
-
-          {/* Live collectors — reels-style on tap */}
-          <View style={styles.card}>
-            <LiveUsersStrip />
           </View>
 
           {/* Active pickup */}

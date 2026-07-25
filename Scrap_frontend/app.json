@@ -2,7 +2,7 @@
   "expo": {
     "name": "Eco Scrap",
     "slug": "thekabadiwala",
-    "version": "3.1.0",
+    "version": "3.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/app/eco_icon_512.png",
     "scheme": "thekabadiwala",
@@ -22,7 +22,7 @@
     "android": {
       "package": "com.thekabadiwala.app",
       "label": "Eco Scrap",
-      "versionCode": 4,
+      "versionCode": 5,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/app/eco_icon_512.png",
         "backgroundColor": "#FFFFFF"

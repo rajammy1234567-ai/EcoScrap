@@ -49,7 +49,6 @@ function RootLayoutNav() {
       <Stack.Screen name="(home)" />
       <Stack.Screen name="(requests)" />
       <Stack.Screen name="(profile)" />
-      <Stack.Screen name="(live)" options={{ presentation: 'fullScreenModal' }} />
     </Stack>
   );
 }
