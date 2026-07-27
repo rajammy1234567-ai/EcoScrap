@@ -13,7 +13,8 @@ module.exports = [
   // Metal
   { key: "iron-steel", name: "Iron / Steel", category: "Metal", rate_per_kg: 28, unit: "Kg", sort_order: 1 },
   { key: "copper-wire", name: "Copper Wire", category: "Metal", rate_per_kg: 450, unit: "Kg", sort_order: 2 },
-  { key: "aluminium", name: "Aluminium", category: "Metal", rate_per_kg: 120, unit: "Kg", sort_order: 3 },
+  { key: "aluminium", name: "Aluminium", category: "Metal", rate_per_kg: 200, unit: "Kg", sort_order: 3 },
+  { key: "brass", name: "Brass", category: "Metal", rate_per_kg: 400, unit: "Kg", sort_order: 4 },
   // Large Appliances
   { key: "fridge", name: "Refrigerator / Fridge", category: "Large Appliances", rate_per_kg: 1000, unit: "Unit", sort_order: 1 },
   { key: "washing-machine", name: "Washing Machine", category: "Large Appliances", rate_per_kg: 800, unit: "Unit", sort_order: 2 },

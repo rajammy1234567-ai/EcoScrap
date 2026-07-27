@@ -3,13 +3,62 @@ const DEFAULTS = require("../data/defaultRateCatalog");
 
 const MAX_IMAGE_BYTES = 2.5 * 1024 * 1024; // ~2.5MB base64 payload limit
 
+/**
+ * Ensure catalog has all default items.
+ * - Missing keys are inserted
+ * - Existing image_url is never wiped
+ * - Aluminium / Brass rates forced to current product prices
+ */
 async function ensureSeeded() {
-  const count = await RateCatalogItem.countDocuments();
-  if (count > 0) return;
-  await RateCatalogItem.insertMany(
-    DEFAULTS.map((d) => ({ ...d, image_url: null, isActive: true })),
+  for (const d of DEFAULTS) {
+    await RateCatalogItem.updateOne(
+      { key: d.key },
+      {
+        $setOnInsert: {
+          key: d.key,
+          name: d.name,
+          category: d.category,
+          rate_per_kg: d.rate_per_kg,
+          unit: d.unit,
+          sort_order: d.sort_order,
+          image_url: null,
+          isActive: true,
+        },
+      },
+      { upsert: true },
+    );
+  }
+
+  // Product rates (always keep these in sync)
+  await RateCatalogItem.updateOne(
+    { key: "aluminium" },
+    {
+      $set: {
+        name: "Aluminium",
+        category: "Metal",
+        rate_per_kg: 200,
+        unit: "Kg",
+        sort_order: 3,
+        isActive: true,
+      },
+    },
   );
-  console.log(`Rate catalog seeded: ${DEFAULTS.length} items`);
+  await RateCatalogItem.updateOne(
+    { key: "brass" },
+    {
+      $set: {
+        key: "brass",
+        name: "Brass",
+        category: "Metal",
+        rate_per_kg: 400,
+        unit: "Kg",
+        sort_order: 4,
+        isActive: true,
+      },
+      $setOnInsert: { image_url: null },
+    },
+    { upsert: true },
+  );
 }
 
 function groupByCategory(items) {

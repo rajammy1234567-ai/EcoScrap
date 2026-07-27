@@ -67,9 +67,10 @@ const FALLBACK: RateSection[] = [
   {
     title: 'Metal',
     data: [
-      { name: 'Iron / Steel', rate_per_kg: 17, unit: 'Kg' },
+      { name: 'Iron / Steel', rate_per_kg: 28, unit: 'Kg' },
       { name: 'Copper Wire', rate_per_kg: 450, unit: 'Kg' },
-      { name: 'Aluminium', rate_per_kg: 120, unit: 'Kg' },
+      { name: 'Aluminium', rate_per_kg: 200, unit: 'Kg' },
+      { name: 'Brass', rate_per_kg: 400, unit: 'Kg' },
     ],
   },
   {

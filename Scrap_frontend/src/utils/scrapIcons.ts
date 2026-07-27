@@ -62,6 +62,7 @@ const ITEM_KEYWORDS: [string, ScrapIconConfig][] = [
   ['copper', { family: 'material', name: 'pipe' }],
   ['aluminium', { family: 'material', name: 'pipe' }],
   ['aluminum', { family: 'material', name: 'pipe' }],
+  ['brass', { family: 'material', name: 'pipe' }],
   ['metal', { family: 'feather', name: 'tool' }],
   ['glass', { family: 'feather', name: 'disc' }],
   ['bottle', { family: 'material', name: 'bottle-soda-outline' }],
