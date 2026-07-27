@@ -1,8 +1,10 @@
 import axios from "axios";
 
-// Same production backend as Eco Scrap app (override via .env if needed)
+// Production (same host as admin UI): /api
+// Dev override: .env VITE_API_URL=https://ecoscrap-1.onrender.com/api
 const API_URL = (
-  import.meta.env.VITE_API_URL || "https://ecoscrap-1.onrender.com/api"
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? "/api" : "https://ecoscrap-1.onrender.com/api")
 ).replace(/\/$/, "");
 
 if (import.meta.env.DEV) {

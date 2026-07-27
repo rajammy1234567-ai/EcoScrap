@@ -5,7 +5,10 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "server": "nodemon server.js"
+    "server": "nodemon server.js",
+    "build:admin": "npm install --prefix ../Scrap-admin && npm run build --prefix ../Scrap-admin && node scripts/copyAdminDist.js",
+    "build": "npm run build:admin",
+    "postinstall": "node -e \"console.log('Backend deps installed')\""
   },
   "keywords": [],
   "author": "",

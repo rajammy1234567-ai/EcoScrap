@@ -1,0 +1,12 @@
+# Render Blueprint — API + Admin UI on same service
+services:
+  - type: web
+    name: ecoscrap-1
+    runtime: node
+    rootDir: .
+    buildCommand: npm install --prefix Scrap-admin && npm run build --prefix Scrap-admin && node Scrap-backend/scripts/copyAdminDist.js && npm install --prefix Scrap-backend
+    startCommand: node Scrap-backend/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Set in Render Dashboard: MONGODB_URI, JWT_SECRET, etc.
