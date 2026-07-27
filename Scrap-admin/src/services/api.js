@@ -1,12 +1,20 @@
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+// Same production backend as Eco Scrap app (override via .env if needed)
+const API_URL = (
+  import.meta.env.VITE_API_URL || "https://ecoscrap-1.onrender.com/api"
+).replace(/\/$/, "");
+
+if (import.meta.env.DEV) {
+  console.log("[Admin API]", API_URL);
+}
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 60000,
 });
 
 // Add token to every request; let browser set boundary for FormData

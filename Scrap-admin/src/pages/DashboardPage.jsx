@@ -26,8 +26,21 @@ export function DashboardPage() {
       setStats(dashResponse.data.stats);
       setPickupStats(pickupResponse.data.stats);
     } catch (err) {
-      setError("Failed to load dashboard stats");
-      console.error(err);
+      const status = err?.response?.status;
+      if (!err?.response) {
+        setError(
+          "Backend offline / slow. URL: https://ecoscrap-1.onrender.com — 30s wait karke refresh (Render cold start).",
+        );
+      } else if (status === 404) {
+        setError(
+          "API 404. Check .env → VITE_API_URL=https://ecoscrap-1.onrender.com/api",
+        );
+      } else if (status === 401 || status === 403) {
+        setError("Unauthorized. Admin account se login karo.");
+      } else {
+        setError(err?.response?.data?.message || "Failed to load dashboard stats");
+      }
+      console.error("[Dashboard]", err);
     } finally {
       setLoading(false);
     }

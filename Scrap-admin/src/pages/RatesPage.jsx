@@ -30,7 +30,20 @@ export function RatesPage() {
       });
       setDrafts(d);
     } catch (e) {
-      setError(e?.response?.data?.message || "Failed to load rates");
+      const status = e?.response?.status;
+      if (status === 404) {
+        setError(
+          "Rate Catalog API not found (404) on https://ecoscrap-1.onrender.com — latest backend Render pe deploy karo (git push).",
+        );
+      } else if (!e?.response) {
+        setError(
+          "Render backend slow/offline. 30s wait karke Refresh dabao. URL: https://ecoscrap-1.onrender.com",
+        );
+      } else if (status === 401 || status === 403) {
+        setError("Login expired ya admin access nahi. Logout → admin account se login.");
+      } else {
+        setError(e?.response?.data?.message || "Failed to load rates");
+      }
     } finally {
       setLoading(false);
     }
