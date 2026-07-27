@@ -72,6 +72,9 @@
     "extra": {
       "router": {},
       "googlePlacesApiKey": "",
+      "googleWebClientId": "123456789012-dummywebclientid.apps.googleusercontent.com",
+      "googleAndroidClientId": "123456789012-dummyandroidclientid.apps.googleusercontent.com",
+      "googleIosClientId": "123456789012-dummyiosclientid.apps.googleusercontent.com",
       "eas": {
         "projectId": "912fc64c-4223-4244-9352-4efe6f3a130a"
       }

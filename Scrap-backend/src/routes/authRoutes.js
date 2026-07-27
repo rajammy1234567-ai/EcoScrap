@@ -5,6 +5,7 @@ const {
   login,
   sendOtp,
   verifyOtp,
+  googleAuth,
   getMe,
   updateProfile,
   updatePushToken,
@@ -15,6 +16,7 @@ router.post("/register", register);
 router.post("/login", login);
 router.post("/send-otp", sendOtp);
 router.post("/verify-otp", verifyOtp);
+router.post("/google", googleAuth);
 router.get("/me", protect, getMe);
 router.put("/profile", protect, updateProfile);
 router.put("/push-token", protect, updatePushToken);
