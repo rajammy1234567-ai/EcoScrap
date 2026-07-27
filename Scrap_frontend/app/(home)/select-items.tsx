@@ -16,15 +16,14 @@ import { userService } from "../../src/services/user";
 import { scrapService } from "../../src/services/scrap";
 import { pickupService } from "../../src/services/pickup";
 import { ScrapIcon } from "../../src/components/ui/ScrapIcon";
+import {
+  DigitalClockPicker,
+  formatTwoHourSlot,
+} from "../../src/components/ui/DigitalClockPicker";
 import { StepProgress } from "../../src/components/layout/StepProgress";
 import { SectionHeader } from "../../src/components/layout/SectionHeader";
 import { colors, radii, spacing, typography, shadows, layout } from "../../src/theme";
 import { Address, ScrapCategory } from "../../src/types";
-
-const TIME_SLOTS = [
-  { label: "2:30 PM to 4:30 PM", hour: 14, minute: 30 },
-  { label: "4:30 PM to 7:00 PM", hour: 16, minute: 30 },
-] as const;
 
 const WEIGHTS = [
   { label: "50–200 Kgs", qty: 100 },
@@ -57,12 +56,16 @@ export default function SelectItemsScreen() {
 
   const [categories, setCategories] = useState<ScrapCategory[]>(FALLBACK_CATS);
   const [catItems, setCatItems] = useState<Record<string, string>>({});
-  const [selectedSlotIdx, setSelectedSlotIdx] = useState(0);
+  /** Start of 2-hour pickup window (digital / system clock) */
+  const [startHour, setStartHour] = useState(14);
+  const [startMinute, setStartMinute] = useState(30);
   const [selectedWeightIdx, setSelectedWeightIdx] = useState(0);
   const [selectedCats, setSelectedCats] = useState<Set<string>>(new Set());
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddr, setSelectedAddr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const slotLabel = formatTwoHourSlot(startHour, startMinute);
 
   useEffect(() => {
     scrapService
@@ -154,16 +157,19 @@ export default function SelectItemsScreen() {
     }
     setLoading(true);
     try {
-      const slot = TIME_SLOTS[selectedSlotIdx];
       const now = new Date();
-      const scheduled = new Date(
+      // Build scheduled start of 2-hour window; if already past today → tomorrow
+      let scheduled = new Date(
         now.getFullYear(),
         now.getMonth(),
         now.getDate(),
-        slot.hour,
-        slot.minute,
+        startHour,
+        startMinute,
         0,
       );
+      if (scheduled.getTime() <= now.getTime() + 30 * 60 * 1000) {
+        scheduled = new Date(scheduled.getTime() + 24 * 60 * 60 * 1000);
+      }
       const qty = WEIGHTS[selectedWeightIdx].qty;
 
       // Ensure we have item ids for the selected categories. If any are missing,
@@ -327,25 +333,18 @@ export default function SelectItemsScreen() {
         contentContainerStyle={styles.content}
       >
         <View style={styles.card}>
-          <SectionHeader title="Pickup time" subtitle="Choose a convenient slot" />
-          <View style={styles.chipRow}>
-          {TIME_SLOTS.map((s, i) => (
-            <Pressable
-              key={i}
-              style={[styles.chip, selectedSlotIdx === i && styles.chipActive]}
-              onPress={() => setSelectedSlotIdx(i)}
-            >
-              <Text
-                style={[
-                  styles.chipLabel,
-                  selectedSlotIdx === i && styles.chipLabelActive,
-                ]}
-              >
-                {s.label}
-              </Text>
-            </Pressable>
-          ))}
-          </View>
+          <SectionHeader
+            title="Pickup time"
+            subtitle="Digital clock · 2-hour slot"
+          />
+          <DigitalClockPicker
+            hour={startHour}
+            minute={startMinute}
+            onChange={(h, m) => {
+              setStartHour(h);
+              setStartMinute(m);
+            }}
+          />
         </View>
 
         <View style={styles.card}>
@@ -480,7 +479,7 @@ export default function SelectItemsScreen() {
             {!loading && (
               <Text style={styles.ctaBtnSub}>
                 {selectedCats.size > 0
-                  ? `${selectedCats.size} categories · ${TIME_SLOTS[selectedSlotIdx].label}`
+                  ? `${selectedCats.size} categories · ${slotLabel}`
                   : "Select categories to continue"}
               </Text>
             )}

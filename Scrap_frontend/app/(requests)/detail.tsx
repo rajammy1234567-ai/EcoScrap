@@ -22,14 +22,16 @@ import { colors, radii, spacing, typography } from "../../src/theme";
 const RATE_MAP: Record<string, number> = {
   "paper-1": 14,   // Newspaper
   "paper-2": 10,   // Books
-  "metal-1": 28,   // Iron
+  "metal-1": 17,   // Iron ₹28/kg
   "metal-2": 450,  // Copper
   "ewaste-1": 500, // Laptop (per unit)
   "ewaste-2": 200, // Phone (per unit)
   "carton-1": 7,   // Cardboard
   "carton-2": 5,   // Plastic Bottles
   "others-1": 30,  // Battery
-  "appliance-1": 200, // Fridge
+  "appliance-1": 1000, // Fridge ₹1000/unit
+  "appliance-2": 800,  // Washing Machine ₹800/unit
+  "appliance-3": 2000, // AC ₹2000/unit
 };
 
 const ITEM_NAMES: Record<string, string> = {
@@ -43,6 +45,8 @@ const ITEM_NAMES: Record<string, string> = {
   "carton-2": "Plastic Bottles",
   "others-1": "Battery",
   "appliance-1": "Refrigerator / Fridge",
+  "appliance-2": "Washing Machine",
+  "appliance-3": "AC (Air Conditioner)",
 };
 
 const CAT_LABELS: Record<string, string> = {

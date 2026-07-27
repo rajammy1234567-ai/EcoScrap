@@ -41,10 +41,10 @@ const PERKS = [
 ] as const;
 
 function networkErrorMessage(err: any, fallback: string) {
-  if (err?.code === "ECONNABORTED" || err?.message?.includes("timeout")) {
-    return "Connection timed out. Make sure the server is running.";
+  if (err?.isNetworkError || err?.code === "ECONNABORTED" || err?.message?.includes("timeout") || err?.message?.includes("Cannot reach")) {
+    return err?.message || "Server se connect nahi ho pa raha. Internet check karo ya backend start karo.";
   }
-  return err?.response?.data?.message || fallback;
+  return err?.response?.data?.message || err?.message || fallback;
 }
 
 export default function LoginScreen() {

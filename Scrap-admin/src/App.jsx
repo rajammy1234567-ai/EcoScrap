@@ -4,8 +4,9 @@ import { Header, Sidebar, LoadingSpinner } from "./components/Header";
 import { DashboardPage } from "./pages/DashboardPage";
 import { PickupsPage } from "./pages/PickupsPage";
 import { UsersPage } from "./pages/UsersPage";
+import { RatesPage } from "./pages/RatesPage";
 import { LoginPage } from "./pages/LoginPage";
-import { useNavigation, useLocation } from "./hooks/useNavigation";
+import { useLocation } from "./hooks/useNavigation";
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -21,6 +22,8 @@ function AppContent() {
     switch (location) {
       case "/pickups":
         return <PickupsPage />;
+      case "/rates":
+        return <RatesPage />;
       case "/users":
         return <UsersPage />;
       case "/dashboard":

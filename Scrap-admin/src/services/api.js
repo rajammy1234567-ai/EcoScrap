@@ -9,11 +9,17 @@ const api = axios.create({
   },
 });
 
-// Add token to every request
+// Add token to every request; let browser set boundary for FormData
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("adminToken");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+    // Axios default Content-Type: application/json breaks multipart
+    if (config.headers) {
+      delete config.headers["Content-Type"];
+    }
   }
   return config;
 });
@@ -34,6 +40,17 @@ export const adminAPI = {
 
   // Users
   getAllUsers: (params) => api.get("/admin/users", { params }),
+
+  // Rate catalog (prices + permanent images)
+  getRates: () => api.get("/admin/rates"),
+  updateRate: (id, data) => api.put(`/admin/rates/${id}`, data),
+  createRate: (data) => api.post("/admin/rates", data),
+  uploadRateImage: (id, file) => {
+    const form = new FormData();
+    form.append("image", file);
+    return api.post(`/admin/rates/${id}/image`, form);
+  },
+  clearRateImage: (id) => api.delete(`/admin/rates/${id}/image`),
 };
 
 export default api;

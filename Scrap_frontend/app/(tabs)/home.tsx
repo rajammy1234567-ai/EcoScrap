@@ -46,22 +46,16 @@ const QUICK_ACTIONS = [
 ] as const;
 
 const TOP_RATES = [
-  { name: 'Newspaper', rate: '₹14/kg', icon: 'Paper' },
-  { name: 'Copper Wire', rate: '₹450/kg', icon: 'Metal' },
-  { name: 'Laptop', rate: '₹500/unit', icon: 'E-Waste' },
+  { name: 'Iron', rate: '₹17/kg', icon: 'Metal' },
+  { name: 'AC', rate: '₹2000/unit', icon: 'Appliances' },
+  { name: 'Fridge', rate: '₹1000/unit', icon: 'Appliances' },
+  { name: 'Washing Machine', rate: '₹800/unit', icon: 'Appliances' },
 ];
 
 const HOW_IT_WORKS = [
   { step: '1', icon: 'calendar', title: 'Schedule', sub: 'Pick time & scrap type' },
   { step: '2', icon: 'truck', title: 'Pickup', sub: 'Partner comes to you' },
   { step: '3', icon: 'dollar-sign', title: 'Get Paid', sub: 'Instant cash on spot' },
-];
-
-const BRANDS = [
-  { id: '1', logo: require('../../assets/images/brands/urban-company.png') },
-  { id: '4', logo: require('../../assets/images/brands/godrej.png') },
-  { id: '5', logo: require('../../assets/images/brands/tata.png') },
-  { id: '6', logo: require('../../assets/images/brands/reliance.png') },
 ];
 
 function getGreeting(): string {
@@ -382,18 +376,6 @@ export default function HomeScreen() {
               <Text style={styles.impactLabel}>recycled through our platform</Text>
             </View>
           </LinearGradient>
-
-          {/* Partners */}
-          <View style={styles.card}>
-            <SectionHeader title="Trusted by leading brands" />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.brandsRow}>
-              {BRANDS.map((b) => (
-                <View key={b.id} style={styles.brandChip}>
-                  <Image source={b.logo} style={styles.brandLogo} resizeMode="contain" />
-                </View>
-              ))}
-            </ScrollView>
-          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -699,17 +681,4 @@ const styles = StyleSheet.create({
   impactText: { flex: 1 },
   impactNum: { fontSize: 18, fontWeight: '800' as const, color: colors.primary.green700 },
   impactLabel: { ...typography.caption, color: colors.primary.green700, marginTop: 2 },
-
-  brandsRow: { gap: spacing.sm },
-  brandChip: {
-    backgroundColor: colors.neutral.gray100,
-    borderRadius: radii.lg,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    minWidth: 90,
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 44,
-  },
-  brandLogo: { width: 64, height: 28 },
 });

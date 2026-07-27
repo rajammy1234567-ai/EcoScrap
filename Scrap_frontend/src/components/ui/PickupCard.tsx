@@ -4,11 +4,34 @@ import { Feather } from "@expo/vector-icons";
 import { Pickup } from "../../types";
 import { colors, radii, shadows, spacing, typography } from "../../theme";
 
-const STATUS_CONFIG: Record<string, { color: string; icon: string; label: string }> = {
-  pending: { color: colors.functional.warning, icon: "clock", label: "Scheduled" },
-  accepted: { color: colors.primary.green600, icon: "truck", label: "On the way" },
-  completed: { color: colors.primary.green600, icon: "check-circle", label: "Completed" },
-  cancelled: { color: colors.functional.error, icon: "x-circle", label: "Cancelled" },
+const STATUS_CONFIG: Record<
+  string,
+  { color: string; bg: string; icon: string; label: string }
+> = {
+  pending: {
+    color: colors.functional.warning,
+    bg: colors.functional.warningBg,
+    icon: "clock",
+    label: "Scheduled",
+  },
+  accepted: {
+    color: colors.primary.green600,
+    bg: colors.primary.green50,
+    icon: "truck",
+    label: "On the way",
+  },
+  completed: {
+    color: colors.primary.green700,
+    bg: colors.primary.green50,
+    icon: "check-circle",
+    label: "Completed",
+  },
+  cancelled: {
+    color: colors.functional.error,
+    bg: colors.functional.errorBg,
+    icon: "x-circle",
+    label: "Cancelled",
+  },
 };
 
 interface Props {
@@ -20,7 +43,7 @@ export function PickupCard({ pickup, onPress }: Props) {
   const cfg = STATUS_CONFIG[pickup.status] ?? STATUS_CONFIG.pending;
   const date = pickup.scheduled_at
     ? new Date(pickup.scheduled_at)
-    : new Date(pickup.created_at);
+    : new Date(pickup.created_at || pickup.createdAt || Date.now());
   const dateStr = date.toLocaleDateString("en-IN", {
     weekday: "short",
     day: "numeric",
@@ -32,37 +55,68 @@ export function PickupCard({ pickup, onPress }: Props) {
         minute: "2-digit",
       })
     : null;
-  const itemLabel = `${pickup.items.length} categor${pickup.items.length !== 1 ? "ies" : "y"}`;
-  const displayId = pickup.displayId ?? pickup.id.slice(0, 8).toUpperCase();
+  const itemCount = pickup.items?.length ?? 0;
+  const itemLabel = `${itemCount} categor${itemCount !== 1 ? "ies" : "y"}`;
+  const displayId =
+    pickup.displayId ?? String(pickup.id || "").slice(0, 8).toUpperCase();
 
   return (
-    <Pressable style={styles.card} onPress={onPress}>
-      <View style={styles.topRow}>
-        <View style={[styles.statusPill, { backgroundColor: cfg.color + "18" }]}>
-          <Feather name={cfg.icon as any} size={12} color={cfg.color} />
-          <Text style={[styles.statusText, { color: cfg.color }]}>{cfg.label}</Text>
-        </View>
-        <Text style={styles.pickupId}>#{displayId}</Text>
-      </View>
+    <Pressable
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      onPress={onPress}
+    >
+      {/* Left status accent */}
+      <View style={[styles.accent, { backgroundColor: cfg.color }]} />
 
-      <View style={styles.routeRow}>
-        <View style={styles.routeLine}>
-          <View style={[styles.routeDot, { backgroundColor: cfg.color }]} />
-          <View style={styles.routeDash} />
-          <View style={styles.routeSquare} />
+      <View style={styles.body}>
+        <View style={styles.topRow}>
+          <View style={[styles.statusPill, { backgroundColor: cfg.bg }]}>
+            <Feather name={cfg.icon as any} size={12} color={cfg.color} />
+            <Text style={[styles.statusText, { color: cfg.color }]}>
+              {cfg.label}
+            </Text>
+          </View>
+          <Text style={styles.pickupId}>#{displayId}</Text>
         </View>
-        <View style={styles.routeInfo}>
-          <Text style={styles.routeDate}>{dateStr}{timeStr ? ` · ${timeStr}` : ""}</Text>
-          <Text style={styles.routeItems}>{itemLabel} selected</Text>
-          {pickup.total_amount != null && (
-            <Text style={styles.routeAmount}>Earned ₹{pickup.total_amount}</Text>
-          )}
-        </View>
-      </View>
 
-      <View style={styles.footer}>
-        <Text style={styles.footerHint}>Tap for details</Text>
-        <Feather name="chevron-right" size={18} color={colors.neutral.gray400} />
+        <View style={styles.mainRow}>
+          <View style={[styles.iconBubble, { backgroundColor: cfg.bg }]}>
+            <Feather name="package" size={20} color={cfg.color} />
+          </View>
+
+          <View style={styles.info}>
+            <Text style={styles.dateText}>
+              {dateStr}
+              {timeStr ? ` · ${timeStr}` : ""}
+            </Text>
+            <View style={styles.metaRow}>
+              <Feather name="layers" size={11} color={colors.neutral.gray400} />
+              <Text style={styles.metaText}>{itemLabel} selected</Text>
+            </View>
+            {pickup.total_amount != null && pickup.total_amount > 0 && (
+              <View style={styles.earnRow}>
+                <Text style={styles.earnLabel}>Earned</Text>
+                <Text style={styles.earnValue}>₹{pickup.total_amount}</Text>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.chevronWrap}>
+            <Feather
+              name="chevron-right"
+              size={18}
+              color={colors.primary.green600}
+            />
+          </View>
+        </View>
+
+        <View style={styles.footer}>
+          <View style={styles.footerLeft}>
+            <Feather name="map-pin" size={11} color={colors.primary.green600} />
+            <Text style={styles.footerHint}>Doorstep pickup</Text>
+          </View>
+          <Text style={styles.detailsLink}>View details</Text>
+        </View>
       </View>
     </Pressable>
   );
@@ -70,10 +124,25 @@ export function PickupCard({ pickup, onPress }: Props) {
 
 const styles = StyleSheet.create({
   card: {
+    flexDirection: "row",
     backgroundColor: colors.neutral.white,
     borderRadius: radii.xl,
-    padding: spacing.lg,
-    ...shadows.md,
+    overflow: "hidden",
+    borderWidth: 1.5,
+    borderColor: colors.neutral.gray100,
+    ...shadows.sm,
+  },
+  cardPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.99 }],
+  },
+  accent: {
+    width: 5,
+  },
+  body: {
+    flex: 1,
+    padding: spacing.md,
+    paddingLeft: spacing.md,
   },
   topRow: {
     flexDirection: "row",
@@ -84,59 +153,98 @@ const styles = StyleSheet.create({
   statusPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 5,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: radii.pill,
   },
-  statusText: { ...typography.caption, fontWeight: "700" as const },
+  statusText: {
+    fontSize: 11,
+    fontWeight: "800" as const,
+  },
   pickupId: {
-    ...typography.caption,
+    fontSize: 11,
     color: colors.neutral.gray400,
-    fontFamily: "monospace",
-    fontWeight: "600" as const,
-  },
-  routeRow: { flexDirection: "row", gap: spacing.md },
-  routeLine: { alignItems: "center", width: 16, paddingTop: 4 },
-  routeDot: { width: 10, height: 10, borderRadius: 5 },
-  routeDash: {
-    width: 2,
-    flex: 1,
-    minHeight: 24,
-    backgroundColor: colors.neutral.gray200,
-    marginVertical: 4,
-  },
-  routeSquare: {
-    width: 8,
-    height: 8,
-    backgroundColor: colors.neutral.gray400,
-    borderRadius: 2,
-  },
-  routeInfo: { flex: 1 },
-  routeDate: {
-    ...typography.bodySmMedium,
     fontWeight: "700" as const,
-    color: colors.neutral.black,
+    letterSpacing: 0.3,
   },
-  routeItems: {
+  mainRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  iconBubble: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  info: { flex: 1, minWidth: 0 },
+  dateText: {
+    fontSize: 15,
+    fontWeight: "800" as const,
+    color: colors.neutral.black,
+    letterSpacing: -0.2,
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 4,
+  },
+  metaText: {
     ...typography.caption,
     color: colors.neutral.gray600,
-    marginTop: 2,
   },
-  routeAmount: {
-    ...typography.bodySm,
-    fontWeight: "700" as const,
+  earnRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 6,
+  },
+  earnLabel: {
+    fontSize: 11,
+    fontWeight: "600" as const,
+    color: colors.neutral.gray400,
+  },
+  earnValue: {
+    fontSize: 14,
+    fontWeight: "800" as const,
     color: colors.primary.green700,
-    marginTop: 4,
+  },
+  chevronWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: colors.primary.green50,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.primary.green100,
   },
   footer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.neutral.gray100,
   },
-  footerHint: { ...typography.caption, color: colors.neutral.gray400 },
+  footerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  footerHint: {
+    fontSize: 11,
+    fontWeight: "600" as const,
+    color: colors.primary.green600,
+  },
+  detailsLink: {
+    fontSize: 11,
+    fontWeight: "700" as const,
+    color: colors.neutral.gray400,
+  },
 });

@@ -18,6 +18,80 @@ const normalizePhone = (phone) => {
 
 const isValidPhone = (phone) => /^\d{10}$/.test(phone);
 
+/** Unique synthetic email so phone-only users don't collide on old email unique index */
+const phonePlaceholderEmail = (phone10) =>
+  `phone_${phone10}@phone.ecoscrap.local`;
+
+/**
+ * Find user by phone, or create phone-only account.
+ * Never fails with "account already exists" for OTP flow.
+ */
+async function findOrCreatePhoneUser(normalizedPhone, name) {
+  let user = await User.findOne({ phone: normalizedPhone });
+
+  if (!user) {
+    // Also match legacy synthetic / placeholder emails
+    user = await User.findOne({
+      email: phonePlaceholderEmail(normalizedPhone),
+    });
+  }
+
+  if (user) {
+    // Backfill phone / placeholder email if missing (fixes old bad rows)
+    let dirty = false;
+    if (!user.phone) {
+      user.phone = normalizedPhone;
+      dirty = true;
+    }
+    if (!user.email) {
+      user.email = phonePlaceholderEmail(normalizedPhone);
+      dirty = true;
+    }
+    if (name?.trim() && user.name === "New User") {
+      user.name = name.trim();
+      dirty = true;
+    }
+    if (dirty) {
+      try {
+        await user.save({ validateBeforeSave: false });
+      } catch {
+        // ignore backfill race
+      }
+    }
+    return { user, isNewUser: false };
+  }
+
+  try {
+    user = await User.create({
+      name: name?.trim() || "New User",
+      phone: normalizedPhone,
+      email: phonePlaceholderEmail(normalizedPhone),
+      password: Math.random().toString(36).slice(-12) + "Aa1",
+      authProvider: "phone",
+    });
+    return { user, isNewUser: true };
+  } catch (err) {
+    // Race / duplicate: load existing and continue (OTP must still work)
+    if (err.code === 11000) {
+      user =
+        (await User.findOne({ phone: normalizedPhone })) ||
+        (await User.findOne({
+          email: phonePlaceholderEmail(normalizedPhone),
+        }));
+      if (user) return { user, isNewUser: false };
+    }
+    throw err;
+  }
+}
+
+async function issuePhoneOtp(user) {
+  const otp = generateOtp();
+  user.otpCode = otp;
+  user.otpExpires = Date.now() + 10 * 60 * 1000;
+  await user.save({ validateBeforeSave: false });
+  return otp;
+}
+
 const sendEmail = async (to, subject, text, html) => {
   const smtpUser = process.env.SMTP_USER || process.env.EMAIL_USER;
   const smtpPass = process.env.SMTP_PASS || process.env.EMAIL_PASSWORD;
@@ -145,24 +219,11 @@ exports.register = async (req, res) => {
         });
       }
 
-      let user = await User.findOne({ phone: normalizedPhone });
-      if (user && user.name !== "New User") {
-        return res
-          .status(400)
-          .json({ success: false, message: "Phone already registered" });
-      }
-
-      if (user) {
+      const { user } = await findOrCreatePhoneUser(normalizedPhone, name);
+      if (user.name === "New User" || name) {
         user.name = name;
         user.authProvider = "phone";
-        await user.save();
-      } else {
-        user = await User.create({
-          name,
-          phone: normalizedPhone,
-          password: Math.random().toString(36).slice(-12) + "Aa1",
-          authProvider: "phone",
-        });
+        await user.save({ validateBeforeSave: false });
       }
 
       return res.status(201).json({
@@ -268,12 +329,11 @@ exports.login = async (req, res) => {
 /**
  * Send / generate OTP for email or phone.
  * For phone: OTP is returned in response so the app can show it in-app.
- * For email: OTP is emailed (and also returned when SMTP is not configured).
+ * Existing numbers always get a fresh OTP (never "account already exists").
  */
 exports.sendOtp = async (req, res) => {
   try {
-    const { email, phone, name, purpose } = req.body;
-    // purpose: 'login' | 'register' (optional hint)
+    const { email, phone, name } = req.body;
 
     if (!email && !phone) {
       return res.status(400).json({
@@ -292,30 +352,16 @@ exports.sendOtp = async (req, res) => {
         });
       }
 
-      let user = await User.findOne({ phone: normalizedPhone });
-      const isNewUser = !user;
+      const { user, isNewUser } = await findOrCreatePhoneUser(
+        normalizedPhone,
+        name,
+      );
+      const otp = await issuePhoneOtp(user);
 
-      if (!user) {
-        user = await User.create({
-          name: name?.trim() || "New User",
-          phone: normalizedPhone,
-          password: Math.random().toString(36).slice(-12) + "Aa1",
-          authProvider: "phone",
-        });
-      } else if (name?.trim() && user.name === "New User") {
-        user.name = name.trim();
-      }
-
-      const otp = generateOtp();
-      user.otpCode = otp;
-      user.otpExpires = Date.now() + 10 * 60 * 1000;
-      await user.save({ validateBeforeSave: false });
-
-      // OTP returned so app can display it (no SMS gateway)
       return res.json({
         success: true,
         message: "OTP generated. Enter it in the app to continue.",
-        otp, // in-app OTP
+        otp,
         is_new_user: isNewUser,
         channel: "phone",
         expires_in: 600,
@@ -328,12 +374,26 @@ exports.sendOtp = async (req, res) => {
     const isNewUser = !user;
 
     if (!user) {
-      user = await User.create({
-        name: name?.trim() || "New User",
-        email: normalizedEmail,
-        password: Math.random().toString(36).slice(-12) + "Aa1",
-        authProvider: "email",
-      });
+      try {
+        user = await User.create({
+          name: name?.trim() || "New User",
+          email: normalizedEmail,
+          password: Math.random().toString(36).slice(-12) + "Aa1",
+          authProvider: "email",
+        });
+      } catch (err) {
+        if (err.code === 11000) {
+          user = await User.findOne({ email: normalizedEmail });
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    if (!user) {
+      return res
+        .status(500)
+        .json({ success: false, message: "Could not create or find user" });
     }
 
     const otp = generateOtp();
@@ -356,7 +416,6 @@ exports.sendOtp = async (req, res) => {
     return res.json({
       success: true,
       message: "OTP sent to email",
-      // Also return OTP so app can show when email is not configured
       otp,
       is_new_user: isNewUser,
       channel: "email",
@@ -364,12 +423,11 @@ exports.sendOtp = async (req, res) => {
       expires_in: 600,
     });
   } catch (err) {
-    if (err.code === 11000) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Account already exists" });
-    }
-    res.status(500).json({ success: false, message: err.message });
+    console.error("sendOtp error:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message || "Failed to generate OTP",
+    });
   }
 };
 

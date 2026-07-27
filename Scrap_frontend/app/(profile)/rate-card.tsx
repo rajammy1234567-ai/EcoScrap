@@ -27,7 +27,7 @@ const FALLBACK_SECTIONS = [
   {
     title: 'Metal',
     data: [
-      { name: 'Iron / Steel', rate_per_kg: 26, unit: 'kg' },
+      { name: 'Iron / Steel', rate_per_kg: 17, unit: 'kg' },
       { name: 'Copper', rate_per_kg: 420, unit: 'kg' },
       { name: 'Aluminium', rate_per_kg: 80, unit: 'kg' },
       { name: 'Brass', rate_per_kg: 250, unit: 'kg' },
@@ -40,6 +40,14 @@ const FALLBACK_SECTIONS = [
       { name: 'Mobile Phone', rate_per_kg: 400, unit: 'kg' },
       { name: 'CPU / Desktop', rate_per_kg: 20, unit: 'kg' },
       { name: 'Battery (UPS)', rate_per_kg: 30, unit: 'kg' },
+    ],
+  },
+  {
+    title: 'Large Appliances',
+    data: [
+      { name: 'Refrigerator / Fridge', rate_per_kg: 1000, unit: 'unit' },
+      { name: 'Washing Machine', rate_per_kg: 800, unit: 'unit' },
+      { name: 'AC (Air Conditioner)', rate_per_kg: 2000, unit: 'unit' },
     ],
   },
   {

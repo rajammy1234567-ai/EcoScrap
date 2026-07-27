@@ -64,7 +64,8 @@
           "photosPermission": "Eco Scrap needs access to your photos to attach scrap item images.",
           "cameraPermission": "Eco Scrap needs camera access to take photos of your scrap items."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true
