@@ -1,5 +1,13 @@
-import { useCallback } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
+import { useCallback, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  Image,
+  ActivityIndicator,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -7,7 +15,18 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../../src/context/AuthContext";
 import { useTabBarInset } from "../../src/hooks/useTabBarInset";
 import { api } from "../../src/services/api";
-import { colors, radii, spacing, typography, layout, shadows } from "../../src/theme";
+import {
+  contentService,
+  HappyCustomer,
+} from "../../src/services/content";
+import {
+  colors,
+  radii,
+  spacing,
+  typography,
+  layout,
+  shadows,
+} from "../../src/theme";
 
 function MenuRow({
   icon,
@@ -36,17 +55,30 @@ function MenuCard({ children }: { children: React.ReactNode }) {
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, setUser, isAuthenticated } = useAuth();
+  const [happyCustomers, setHappyCustomers] = useState<HappyCustomer[]>([]);
+  const [happyLoading, setHappyLoading] = useState(true);
 
   // Keep role / scrapperStatus fresh after admin approval
   useFocusEffect(
     useCallback(() => {
-      if (!isAuthenticated) return;
-      api
-        .get("/api/auth/me")
+      if (isAuthenticated) {
+        api
+          .get("/api/auth/me")
+          .then((res) => {
+            if (res.data?.user) setUser(res.data.user);
+          })
+          .catch(() => {});
+      }
+
+      // Happy customers — public, sabko dikhe (login optional)
+      setHappyLoading(true);
+      contentService
+        .listHappyCustomers()
         .then((res) => {
-          if (res.data?.user) setUser(res.data.user);
+          setHappyCustomers(res.data?.happyCustomers || []);
         })
-        .catch(() => {});
+        .catch(() => setHappyCustomers([]))
+        .finally(() => setHappyLoading(false));
     }, [isAuthenticated, setUser]),
   );
 
@@ -115,6 +147,70 @@ export default function ProfileScreen() {
           <Text style={styles.name}>{displayName}</Text>
           <Text style={styles.phone}>{contactInfo}</Text>
         </LinearGradient>
+
+        {/* Happy customers — visible to everyone */}
+        <View style={styles.happySection}>
+          <View style={styles.happyHeader}>
+            <View>
+              <Text style={styles.happyTitle}>Happy customers</Text>
+              <Text style={styles.happySub}>
+                Real pickup smiles from our partners
+              </Text>
+            </View>
+            <View style={styles.happyBadge}>
+              <Feather name="heart" size={14} color={colors.primary.green700} />
+            </View>
+          </View>
+
+          {happyLoading ? (
+            <ActivityIndicator
+              color={colors.primary.green600}
+              style={{ marginVertical: spacing.lg }}
+            />
+          ) : happyCustomers.length === 0 ? (
+            <View style={styles.happyEmpty}>
+              <Feather
+                name="users"
+                size={28}
+                color={colors.neutral.gray400}
+              />
+              <Text style={styles.happyEmptyText}>
+                Photos from completed pickups will appear here
+              </Text>
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.happyRow}
+            >
+              {happyCustomers.map((h) => (
+                <View key={h.id} style={styles.happyCard}>
+                  <Image
+                    source={{ uri: h.photoUrl }}
+                    style={styles.happyImg}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.happyMeta}>
+                    <Text style={styles.happyName} numberOfLines={1}>
+                      {h.customerName || "Customer"}
+                    </Text>
+                    {!!h.city && (
+                      <Text style={styles.happyCity} numberOfLines={1}>
+                        {h.city}
+                      </Text>
+                    )}
+                    {!!h.caption && (
+                      <Text style={styles.happyCap} numberOfLines={2}>
+                        {h.caption}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          )}
+        </View>
 
         <View style={styles.menuSection}>
           {/* Scrapper section */}
@@ -213,7 +309,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: spacing["2xl"],
     paddingBottom: spacing["3xl"],
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
     overflow: "hidden",
   },
   deco1: {
@@ -257,6 +353,79 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   phone: { ...typography.bodySm, color: colors.neutral.gray400 },
+
+  happySection: {
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.xl,
+    backgroundColor: colors.neutral.white,
+    borderRadius: radii.xl,
+    padding: spacing.lg,
+    ...shadows.sm,
+  },
+  happyHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: spacing.md,
+  },
+  happyTitle: {
+    ...typography.h3,
+    color: colors.neutral.black,
+  },
+  happySub: {
+    ...typography.caption,
+    color: colors.neutral.gray500 || colors.neutral.gray400,
+    marginTop: 2,
+  },
+  happyBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary.green50,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  happyEmpty: {
+    alignItems: "center",
+    paddingVertical: spacing.xl,
+    gap: spacing.sm,
+  },
+  happyEmptyText: {
+    ...typography.caption,
+    color: colors.neutral.gray400,
+    textAlign: "center",
+    paddingHorizontal: spacing.lg,
+  },
+  happyRow: { gap: spacing.md, paddingRight: spacing.sm },
+  happyCard: {
+    width: 148,
+    backgroundColor: colors.neutral.gray50 || colors.neutral.gray100,
+    borderRadius: radii.xl,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: colors.neutral.gray100,
+  },
+  happyImg: {
+    width: "100%",
+    height: 110,
+    backgroundColor: colors.neutral.gray100,
+  },
+  happyMeta: { padding: spacing.md },
+  happyName: {
+    ...typography.bodySmMedium,
+    fontWeight: "700" as const,
+    color: colors.neutral.black,
+  },
+  happyCity: {
+    ...typography.caption,
+    color: colors.neutral.gray400,
+    marginTop: 2,
+  },
+  happyCap: {
+    ...typography.caption,
+    color: colors.neutral.gray600,
+    marginTop: 4,
+  },
 
   menuSection: { paddingHorizontal: spacing.xl, gap: spacing.lg },
   card: {

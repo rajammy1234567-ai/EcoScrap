@@ -11,11 +11,15 @@ import {
   Modal,
   TextInput,
   KeyboardAvoidingView,
+  Image,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Feather } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { scrapperService, WalletInfo } from "../../src/services/scrapper";
+import { contentService } from "../../src/services/content";
 import { useAuth } from "../../src/context/AuthContext";
 import { EmptyState } from "../../src/components/ui/EmptyState";
 import { Button } from "../../src/components/ui/Button";
@@ -41,6 +45,7 @@ interface JobPickup {
   paymentAmount?: number;
   paymentStatus?: string;
   distanceKm?: number | null;
+  image_urls?: string[];
   items?: { scrap_item_id: string; estimated_qty?: number }[];
   address?: {
     flat_number?: string;
@@ -49,6 +54,7 @@ interface JobPickup {
     pincode?: string;
   } | null;
   customer?: { name?: string; phone?: string; payoutUpi?: string | null };
+  location?: { latitude?: number; longitude?: number };
 }
 
 export default function ScrapperJobsScreen() {
@@ -187,12 +193,57 @@ export default function ScrapperJobsScreen() {
               },
         );
       }
-      showAlert(
-        "Paid ✓",
+      const paidMsg =
         res.data.message ||
-          `₹${amount} paid. Remaining wallet: ₹${res.data.wallet?.balance ?? "—"}`,
-      );
-      load();
+        `₹${amount} paid. Remaining wallet: ₹${res.data.wallet?.balance ?? "—"}`;
+
+      // Optional: happy customer photo for home page
+      const askHappy = async () => {
+        const pick = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!pick.granted) {
+          showAlert("Paid ✓", paidMsg);
+          load();
+          return;
+        }
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ["images"],
+          quality: 0.55,
+          base64: true,
+        });
+        if (result.canceled || !result.assets?.[0]?.base64) {
+          showAlert("Paid ✓", paidMsg);
+          load();
+          return;
+        }
+        const mime = result.assets[0].mimeType || "image/jpeg";
+        const photoUrl = `data:${mime};base64,${result.assets[0].base64}`;
+        try {
+          await contentService.postHappyCustomer({
+            pickupId: id,
+            photoUrl,
+            customerName: payJob.customer?.name,
+            city: payJob.address?.city,
+            caption: "Pickup completed successfully",
+          });
+          showAlert("Paid ✓", `${paidMsg}\nHappy customer photo posted!`);
+        } catch {
+          showAlert("Paid ✓", paidMsg);
+        }
+        load();
+      };
+
+      if (Platform.OS === "web") {
+        if (window.confirm(`${paidMsg}\n\nAdd a Happy Customer photo for the home page?`)) {
+          await askHappy();
+        } else {
+          load();
+        }
+      } else {
+        Alert.alert("Paid ✓", paidMsg, [
+          { text: "Skip", onPress: () => load() },
+          { text: "Add photo", onPress: () => askHappy() },
+        ]);
+      }
     } catch (err: any) {
       showAlert(
         "Payment failed",
@@ -269,8 +320,40 @@ export default function ScrapperJobsScreen() {
         </View>
         <View style={styles.row}>
           <Feather name="package" size={14} color={colors.neutral.gray600} />
-          <Text style={styles.rowText}>{item.items?.length || 0} item(s)</Text>
+          <Text style={styles.rowText}>
+            {item.items?.length || 0} item(s)
+            {item.items?.[0]?.estimated_qty
+              ? ` · ~${item.items[0].estimated_qty} kg est.`
+              : ""}
+          </Text>
         </View>
+
+        {!!item.notes && (
+          <View style={styles.row}>
+            <Feather name="file-text" size={14} color={colors.neutral.gray600} />
+            <Text style={styles.rowText} numberOfLines={3}>
+              Note: {item.notes}
+            </Text>
+          </View>
+        )}
+
+        {!!item.image_urls?.length && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.imgScroll}
+            contentContainerStyle={{ gap: 8 }}
+          >
+            {item.image_urls.map((uri, i) => (
+              <Image
+                key={i}
+                source={{ uri }}
+                style={styles.jobImg}
+                resizeMode="cover"
+              />
+            ))}
+          </ScrollView>
+        )}
 
         {item.paymentStatus === "paid" && (
           <View style={styles.paidBox}>
@@ -637,6 +720,13 @@ const styles = StyleSheet.create({
   },
   locBannerTextWarn: {
     color: colors.functional.error,
+  },
+  imgScroll: { marginTop: spacing.sm, marginBottom: spacing.sm },
+  jobImg: {
+    width: 88,
+    height: 88,
+    borderRadius: radii.lg,
+    backgroundColor: colors.neutral.gray100,
   },
   tab: {
     flex: 1,

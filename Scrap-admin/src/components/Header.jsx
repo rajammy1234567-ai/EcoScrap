@@ -1,5 +1,5 @@
 import React from "react";
-import { LogOut, BarChart3, Package, Users, IndianRupee, Wrench } from "lucide-react";
+import { LogOut, BarChart3, Package, Users, IndianRupee, Wrench, Heart } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigation, useLocation } from "../hooks/useNavigation";
 
@@ -47,6 +47,7 @@ export function Sidebar() {
     { label: "Dashboard", icon: BarChart3, path: "/dashboard" },
     { label: "Pickups", icon: Package, path: "/pickups" },
     { label: "Scrapers", icon: Wrench, path: "/scrapers" },
+    { label: "Happy Customers", icon: Heart, path: "/happy-customers" },
     { label: "Rate Catalog", icon: IndianRupee, path: "/rates" },
     { label: "Users", icon: Users, path: "/users" },
   ];

@@ -7,10 +7,12 @@ import {
   Pressable,
   Alert,
   Platform,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../src/context/AuthContext";
 import { userService } from "../../src/services/user";
 import { scrapService } from "../../src/services/scrap";
@@ -24,6 +26,9 @@ import { StepProgress } from "../../src/components/layout/StepProgress";
 import { SectionHeader } from "../../src/components/layout/SectionHeader";
 import { colors, radii, spacing, typography, shadows, layout } from "../../src/theme";
 import { Address, ScrapCategory } from "../../src/types";
+
+const MAX_PICKUP_IMAGES = 5;
+const MAX_IMAGE_BYTES = 1.8 * 1024 * 1024;
 
 const WEIGHTS = [
   { label: "50–200 Kgs", qty: 100 },
@@ -64,8 +69,57 @@ export default function SelectItemsScreen() {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddr, setSelectedAddr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  /** data URIs for scrap photos shown to admin + scrapers */
+  const [pickupImages, setPickupImages] = useState<string[]>([]);
 
   const slotLabel = formatTwoHourSlot(startHour, startMinute);
+
+  const addPickupPhoto = async () => {
+    if (pickupImages.length >= MAX_PICKUP_IMAGES) {
+      showAlert("Limit", `Max ${MAX_PICKUP_IMAGES} photos`);
+      return;
+    }
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        showAlert("Permission", "Allow photo library to attach scrap photos");
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        quality: 0.5,
+        base64: true,
+        allowsMultipleSelection: false,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+      let dataUri = "";
+      if (asset.base64) {
+        if (asset.base64.length * 0.75 > MAX_IMAGE_BYTES) {
+          showAlert("Too large", "Use a smaller photo (max ~1.5MB)");
+          return;
+        }
+        const mime = asset.mimeType || "image/jpeg";
+        dataUri = `data:${mime};base64,${asset.base64}`;
+      } else if (asset.uri) {
+        const res = await fetch(asset.uri);
+        const blob = await res.blob();
+        if (blob.size > MAX_IMAGE_BYTES) {
+          showAlert("Too large", "Use a smaller photo (max ~1.5MB)");
+          return;
+        }
+        dataUri = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      }
+      if (dataUri) setPickupImages((prev) => [...prev, dataUri]);
+    } catch {
+      showAlert("Error", "Could not add photo");
+    }
+  };
 
   useEffect(() => {
     scrapService
@@ -286,7 +340,7 @@ export default function SelectItemsScreen() {
         const res = await pickupService.create({
           address_id: selectedAddr,
           items: itemsPayload,
-          image_urls: [],
+          image_urls: pickupImages,
           scheduled_at: scheduled.toISOString(),
           ...(latitude != null && longitude != null
             ? { latitude, longitude }
@@ -478,6 +532,40 @@ export default function SelectItemsScreen() {
           })}
           </View>
         </View>
+
+        {/* Scrap photos for admin + nearby scrapers */}
+        <View style={styles.card}>
+          <SectionHeader
+            title="Scrap photos"
+            subtitle="Optional · helps scrapers estimate price"
+          />
+          <View style={styles.photoRow}>
+            {pickupImages.map((uri, idx) => (
+              <View key={idx} style={styles.photoThumbWrap}>
+                <Image source={{ uri }} style={styles.photoThumb} />
+                <Pressable
+                  style={styles.photoRemove}
+                  onPress={() =>
+                    setPickupImages((prev) => prev.filter((_, i) => i !== idx))
+                  }
+                  hitSlop={8}
+                >
+                  <Feather name="x" size={12} color="#fff" />
+                </Pressable>
+              </View>
+            ))}
+            {pickupImages.length < MAX_PICKUP_IMAGES && (
+              <Pressable style={styles.photoAdd} onPress={addPickupPhoto}>
+                <Feather
+                  name="camera"
+                  size={22}
+                  color={colors.primary.green600}
+                />
+                <Text style={styles.photoAddText}>Add</Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
       </ScrollView>
 
       <View style={styles.ctaWrap}>
@@ -544,6 +632,48 @@ const styles = StyleSheet.create({
   },
 
   content: { padding: spacing.lg, paddingBottom: 130, gap: spacing.md },
+
+  photoRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  photoThumbWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: radii.lg,
+    overflow: "hidden",
+  },
+  photoThumb: { width: "100%", height: "100%" },
+  photoRemove: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  photoAdd: {
+    width: 72,
+    height: 72,
+    borderRadius: radii.lg,
+    borderWidth: 1.5,
+    borderColor: colors.primary.green200,
+    borderStyle: "dashed",
+    backgroundColor: colors.primary.green50,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+  },
+  photoAddText: {
+    ...typography.caption,
+    color: colors.primary.green700,
+    fontWeight: "600",
+  },
 
   card: {
     backgroundColor: colors.neutral.white,

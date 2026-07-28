@@ -84,6 +84,38 @@ export const adminAPI = {
     return api.post(`/admin/rates/${id}/image`, form);
   },
   clearRateImage: (id) => api.delete(`/admin/rates/${id}/image`),
+
+  // Demo video (mobile home) — URL JSON or gallery FormData
+  getDemoVideo: () => api.get("/admin/demo-video"),
+  updateDemoVideo: (data) => api.put("/admin/demo-video", data),
+  /** Upload video file from gallery/PC */
+  uploadDemoVideo: (file, title) => {
+    const form = new FormData();
+    form.append("video", file);
+    if (title) form.append("demoVideoTitle", title);
+    return api.put("/admin/demo-video", form, {
+      timeout: 180000,
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+
+  // Happy customers (app profile / home)
+  getHappyCustomers: () => api.get("/admin/happy-customers"),
+  createHappyCustomer: (data) => api.post("/admin/happy-customers", data),
+  uploadHappyCustomer: (file, fields = {}) => {
+    const form = new FormData();
+    form.append("image", file);
+    Object.entries(fields).forEach(([k, v]) => {
+      if (v != null && v !== "") form.append(k, v);
+    });
+    return api.post("/admin/happy-customers", form, {
+      timeout: 120000,
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+  deleteHappyCustomer: (id) => api.delete(`/admin/happy-customers/${id}`),
+  seedHappyCustomers: (force = true) =>
+    api.post("/admin/happy-customers/seed", { force }),
 };
 
 export default api;

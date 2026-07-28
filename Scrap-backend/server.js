@@ -16,6 +16,7 @@ const publicScrapRoutes = require("./src/routes/publicScrapRoutes");
 const pickupRoutes = require("./src/routes/pickupRoutes");
 const scrapperRoutes = require("./src/routes/scrapperRoutes");
 const notificationRoutes = require("./src/routes/notificationRoutes");
+const contentRoutes = require("./src/routes/contentRoutes");
 
 // Atlas SRV DNS — set before any Mongo connect
 try {
@@ -91,6 +92,7 @@ app.use("/api/v1/scrap", publicScrapRoutes);
 app.use("/api/v1/pickups", pickupRoutes);
 app.use("/api/v1/scrapper", scrapperRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
+app.use("/api/v1/content", contentRoutes);
 
 app.get(["/api", "/api/"], (_req, res) => {
   res.status(200).json(apiInfo());

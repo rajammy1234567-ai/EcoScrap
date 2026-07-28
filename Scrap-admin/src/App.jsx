@@ -6,6 +6,7 @@ import { PickupsPage } from "./pages/PickupsPage";
 import { UsersPage } from "./pages/UsersPage";
 import { RatesPage } from "./pages/RatesPage";
 import { ScrappersPage } from "./pages/ScrappersPage";
+import { HappyCustomersPage } from "./pages/HappyCustomersPage";
 import { LoginPage } from "./pages/LoginPage";
 import { useLocation } from "./hooks/useNavigation";
 
@@ -29,6 +30,8 @@ function AppContent() {
         return <UsersPage />;
       case "/scrapers":
         return <ScrappersPage />;
+      case "/happy-customers":
+        return <HappyCustomersPage />;
       case "/dashboard":
       default:
         return <DashboardPage />;

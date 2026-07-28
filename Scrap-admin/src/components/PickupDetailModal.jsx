@@ -165,12 +165,12 @@ export default function PickupDetailModal({ pickup, onClose, onUpdate }) {
             </div>
           )}
 
-          {/* Images */}
-          {pickup.image_urls && pickup.image_urls.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                📸 Images
-              </h3>
+          {/* Images from user schedule */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+              📸 Scrap photos ({pickup.image_urls?.length || 0})
+            </h3>
+            {pickup.image_urls && pickup.image_urls.length > 0 ? (
               <div className="grid grid-cols-3 gap-4">
                 {pickup.image_urls.map((url, idx) => (
                   <a
@@ -188,6 +188,21 @@ export default function PickupDetailModal({ pickup, onClose, onUpdate }) {
                   </a>
                 ))}
               </div>
+            ) : (
+              <p className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
+                No photos uploaded with this pickup.
+              </p>
+            )}
+          </div>
+
+          {pickup.location?.latitude != null && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                📍 GPS
+              </h3>
+              <p className="text-sm font-mono text-gray-700 bg-gray-50 p-3 rounded-lg">
+                {pickup.location.latitude}, {pickup.location.longitude}
+              </p>
             </div>
           )}
 

@@ -6,6 +6,7 @@ import {
   ScrollView,
   Alert,
   Pressable,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
@@ -320,6 +321,29 @@ export default function RequestDetailScreen() {
             <Text style={s.dimText}>Address details not available</Text>
           )}
         </View>
+
+        {/* ── PHOTOS ────────────────────────────────────────────────────── */}
+        {Array.isArray((pickup as any).image_urls) &&
+          (pickup as any).image_urls.length > 0 && (
+            <View style={s.card}>
+              <Text style={s.cardTitle}>📸 Your scrap photos</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {(pickup as any).image_urls.map((uri: string, i: number) => (
+                  <Image
+                    key={i}
+                    source={{ uri }}
+                    style={{
+                      width: 100,
+                      height: 100,
+                      borderRadius: 12,
+                      marginRight: 8,
+                      backgroundColor: "#eee",
+                    }}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
         {/* ── MATERIALS ─────────────────────────────────────────────────── */}
         <View style={s.card}>

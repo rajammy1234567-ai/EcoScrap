@@ -231,19 +231,7 @@ function StatusBanner({
       </View>
     );
   }
-  return (
-    <View style={[styles.banner, styles.bannerInfo]}>
-      <Feather name="info" size={22} color={colors.functional.info} />
-      <View style={{ flex: 1 }}>
-        <Text style={styles.bannerTitle}>Become a registered scrapper</Text>
-        <Text style={styles.bannerBody}>
-          Submit real KYC (Aadhaar + PAN). After approval you get ₹
-          {signupBonus || 5000} float to pay scrap sellers. All spends are logged
-          for admin.
-        </Text>
-      </View>
-    </View>
-  );
+  return null;
 }
 
 export default function BecomeScrapperScreen() {

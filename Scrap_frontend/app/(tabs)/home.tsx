@@ -12,6 +12,8 @@ import { useAuth } from '../../src/context/AuthContext';
 import { userService } from '../../src/services/user';
 import { pickupService } from '../../src/services/pickup';
 import { scrapService } from '../../src/services/scrap';
+import { contentService, DemoVideo, HappyCustomer } from '../../src/services/content';
+import { DemoVideoPlayer } from '../../src/components/home/DemoVideoPlayer';
 import { SectionHeader } from '../../src/components/layout/SectionHeader';
 import { ScrapIcon } from '../../src/components/ui/ScrapIcon';
 import { ONBOARDING_CATEGORIES } from '../../src/utils/scrapIcons';
@@ -19,6 +21,11 @@ import { Address, Pickup } from '../../src/types';
 import { AppImages } from '../../src/assets/images';
 import { useTabBarInset } from '../../src/hooks/useTabBarInset';
 import { colors, spacing, typography, radii, shadows, layout } from '../../src/theme';
+
+const DEFAULT_DEMO: DemoVideo = {
+  url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+  title: 'How Eco Scrap works',
+};
 
 const { width: W } = Dimensions.get('window');
 const CARD_PAD = spacing.lg;
@@ -77,9 +84,28 @@ export default function HomeScreen() {
   const [activePickup, setActivePickup] = useState<Pickup | null>(null);
   const [activePromo, setActivePromo] = useState(0);
   const [topRates, setTopRates] = useState(DEFAULT_TOP_RATES);
+  const [demoVideo, setDemoVideo] = useState<DemoVideo>(DEFAULT_DEMO);
+  const [happyCustomers, setHappyCustomers] = useState<HappyCustomer[]>([]);
   const promoRef = useRef<FlatList>(null);
 
   const loadData = useCallback(async () => {
+    // Home content: demo video + happy customers
+    try {
+      const homeRes = await contentService.getHome();
+      if (homeRes.data?.demoVideo?.url) {
+        setDemoVideo({
+          url: homeRes.data.demoVideo.url,
+          title: homeRes.data.demoVideo.title || DEFAULT_DEMO.title,
+          poster: homeRes.data.demoVideo.poster,
+        });
+      }
+      if (Array.isArray(homeRes.data?.happyCustomers)) {
+        setHappyCustomers(homeRes.data.happyCustomers);
+      }
+    } catch {
+      /* keep defaults */
+    }
+
     // Always load live rates (admin catalog)
     try {
       const rateRes = await scrapService.getRateCard();
@@ -233,6 +259,9 @@ export default function HomeScreen() {
               resizeMode="cover"
             />
           </Pressable>
+
+          {/* Demo video — always looping, mute/unmute + pause */}
+          <DemoVideoPlayer url={demoVideo.url} title={demoVideo.title} />
 
           {/* Promo banners */}
           <View style={styles.promoSection}>
@@ -397,6 +426,46 @@ export default function HomeScreen() {
               ))}
             </View>
           </View>
+
+          {/* Happy customers — photos from scrapers after pickup */}
+          {happyCustomers.length > 0 && (
+            <View style={styles.happySection}>
+              <SectionHeader
+                title="Happy customers"
+                subtitle="Real pickups from our partners"
+              />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.happyRow}
+              >
+                {happyCustomers.map((h) => (
+                  <View key={h.id} style={styles.happyCard}>
+                    <Image
+                      source={{ uri: h.photoUrl }}
+                      style={styles.happyImg}
+                      resizeMode="cover"
+                    />
+                    <View style={styles.happyMeta}>
+                      <Text style={styles.happyName} numberOfLines={1}>
+                        {h.customerName || 'Customer'}
+                      </Text>
+                      {!!h.city && (
+                        <Text style={styles.happyCity} numberOfLines={1}>
+                          {h.city}
+                        </Text>
+                      )}
+                      {!!h.caption && (
+                        <Text style={styles.happyCap} numberOfLines={2}>
+                          {h.caption}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           {/* Impact */}
           <LinearGradient
@@ -703,6 +772,27 @@ const styles = StyleSheet.create({
   },
   stepTitle: { ...typography.caption, fontWeight: '700' as const, color: colors.neutral.black },
   stepSub: { ...typography.caption, color: colors.neutral.gray400, textAlign: 'center', fontSize: 10, marginTop: 2 },
+  happySection: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  happyRow: { gap: spacing.md, paddingRight: spacing.lg },
+  happyCard: {
+    width: 160,
+    backgroundColor: colors.neutral.white,
+    borderRadius: radii.xl,
+    overflow: 'hidden',
+    ...shadows.sm,
+  },
+  happyImg: { width: '100%', height: 120, backgroundColor: colors.neutral.gray100 },
+  happyMeta: { padding: spacing.md },
+  happyName: {
+    ...typography.bodySmMedium,
+    fontWeight: '700' as const,
+    color: colors.neutral.black,
+  },
+  happyCity: { ...typography.caption, color: colors.neutral.gray400, marginTop: 2 },
+  happyCap: { ...typography.caption, color: colors.neutral.gray600, marginTop: 4 },
   stepLine: {
     position: 'absolute',
     top: 22,
