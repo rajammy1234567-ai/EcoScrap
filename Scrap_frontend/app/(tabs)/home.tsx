@@ -87,21 +87,38 @@ export default function HomeScreen() {
   const [demoVideo, setDemoVideo] = useState<DemoVideo>(DEFAULT_DEMO);
   const [happyCustomers, setHappyCustomers] = useState<HappyCustomer[]>([]);
   const promoRef = useRef<FlatList>(null);
+  const homeContentLoaded = useRef(false);
 
   const loadData = useCallback(async () => {
-    // Home content: demo video + happy customers
+    // Home content: demo video + happy customers (skip re-set if unchanged → no blink)
     try {
       const homeRes = await contentService.getHome();
       if (homeRes.data?.demoVideo?.url) {
-        setDemoVideo({
-          url: homeRes.data.demoVideo.url,
-          title: homeRes.data.demoVideo.title || DEFAULT_DEMO.title,
-          poster: homeRes.data.demoVideo.poster,
-        });
+        const nextUrl = homeRes.data.demoVideo.url;
+        const nextTitle = homeRes.data.demoVideo.title || DEFAULT_DEMO.title;
+        setDemoVideo((prev) =>
+          prev.url === nextUrl && prev.title === nextTitle
+            ? prev
+            : {
+                url: nextUrl,
+                title: nextTitle,
+                poster: homeRes.data.demoVideo.poster,
+              },
+        );
       }
       if (Array.isArray(homeRes.data?.happyCustomers)) {
-        setHappyCustomers(homeRes.data.happyCustomers);
+        const next = homeRes.data.happyCustomers as HappyCustomer[];
+        setHappyCustomers((prev) => {
+          if (
+            prev.length === next.length &&
+            prev.every((p, i) => String(p.id) === String(next[i]?.id))
+          ) {
+            return prev;
+          }
+          return next;
+        });
       }
+      homeContentLoaded.current = true;
     } catch {
       /* keep defaults */
     }
@@ -440,11 +457,12 @@ export default function HomeScreen() {
                 contentContainerStyle={styles.happyRow}
               >
                 {happyCustomers.map((h) => (
-                  <View key={h.id} style={styles.happyCard}>
+                  <View key={String(h.id)} style={styles.happyCard}>
                     <Image
                       source={{ uri: h.photoUrl }}
                       style={styles.happyImg}
                       resizeMode="cover"
+                      fadeDuration={0}
                     />
                     <View style={styles.happyMeta}>
                       <Text style={styles.happyName} numberOfLines={1}>

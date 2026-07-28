@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -57,6 +57,7 @@ export default function ProfileScreen() {
   const { user, setUser, isAuthenticated } = useAuth();
   const [happyCustomers, setHappyCustomers] = useState<HappyCustomer[]>([]);
   const [happyLoading, setHappyLoading] = useState(true);
+  const happyLoadedOnce = useRef(false);
 
   // Keep role / scrapperStatus fresh after admin approval
   useFocusEffect(
@@ -70,15 +71,32 @@ export default function ProfileScreen() {
           .catch(() => {});
       }
 
-      // Happy customers — public, sabko dikhe (login optional)
-      setHappyLoading(true);
+      // Happy customers — first load spinner only; later silent refresh (no blink)
+      const firstLoad = !happyLoadedOnce.current;
+      if (firstLoad) setHappyLoading(true);
+
       contentService
         .listHappyCustomers()
         .then((res) => {
-          setHappyCustomers(res.data?.happyCustomers || []);
+          const next = res.data?.happyCustomers || [];
+          setHappyCustomers((prev) => {
+            // Same list → skip re-render flash
+            if (
+              prev.length === next.length &&
+              prev.every((p, i) => String(p.id) === String(next[i]?.id))
+            ) {
+              return prev;
+            }
+            return next;
+          });
+          happyLoadedOnce.current = true;
         })
-        .catch(() => setHappyCustomers([]))
-        .finally(() => setHappyLoading(false));
+        .catch(() => {
+          if (firstLoad) setHappyCustomers([]);
+        })
+        .finally(() => {
+          if (firstLoad) setHappyLoading(false);
+        });
     }, [isAuthenticated, setUser]),
   );
 
@@ -162,54 +180,60 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          {happyLoading ? (
-            <ActivityIndicator
-              color={colors.primary.green600}
-              style={{ marginVertical: spacing.lg }}
-            />
-          ) : happyCustomers.length === 0 ? (
-            <View style={styles.happyEmpty}>
-              <Feather
-                name="users"
-                size={28}
-                color={colors.neutral.gray400}
+          <View style={styles.happyBody}>
+            {happyLoading && happyCustomers.length === 0 ? (
+              <ActivityIndicator
+                color={colors.primary.green600}
+                style={{ marginVertical: spacing.lg }}
               />
-              <Text style={styles.happyEmptyText}>
-                Photos from completed pickups will appear here
-              </Text>
-            </View>
-          ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.happyRow}
-            >
-              {happyCustomers.map((h) => (
-                <View key={h.id} style={styles.happyCard}>
-                  <Image
-                    source={{ uri: h.photoUrl }}
-                    style={styles.happyImg}
-                    resizeMode="cover"
-                  />
-                  <View style={styles.happyMeta}>
-                    <Text style={styles.happyName} numberOfLines={1}>
-                      {h.customerName || "Customer"}
-                    </Text>
-                    {!!h.city && (
-                      <Text style={styles.happyCity} numberOfLines={1}>
-                        {h.city}
+            ) : happyCustomers.length === 0 ? (
+              <View style={styles.happyEmpty}>
+                <Feather
+                  name="users"
+                  size={28}
+                  color={colors.neutral.gray400}
+                />
+                <Text style={styles.happyEmptyText}>
+                  Photos from completed pickups will appear here
+                </Text>
+              </View>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.happyRow}
+                // Prevent remount flash while parent re-renders
+                removeClippedSubviews={false}
+              >
+                {happyCustomers.map((h) => (
+                  <View key={String(h.id)} style={styles.happyCard}>
+                    <Image
+                      source={{ uri: h.photoUrl }}
+                      style={styles.happyImg}
+                      resizeMode="cover"
+                      // Keep previous frame while URI reloads
+                      fadeDuration={0}
+                    />
+                    <View style={styles.happyMeta}>
+                      <Text style={styles.happyName} numberOfLines={1}>
+                        {h.customerName || "Customer"}
                       </Text>
-                    )}
-                    {!!h.caption && (
-                      <Text style={styles.happyCap} numberOfLines={2}>
-                        {h.caption}
-                      </Text>
-                    )}
+                      {!!h.city && (
+                        <Text style={styles.happyCity} numberOfLines={1}>
+                          {h.city}
+                        </Text>
+                      )}
+                      {!!h.caption && (
+                        <Text style={styles.happyCap} numberOfLines={2}>
+                          {h.caption}
+                        </Text>
+                      )}
+                    </View>
                   </View>
-                </View>
-              ))}
-            </ScrollView>
-          )}
+                ))}
+              </ScrollView>
+            )}
+          </View>
         </View>
 
         <View style={styles.menuSection}>
@@ -384,6 +408,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary.green50,
     alignItems: "center",
     justifyContent: "center",
+  },
+  happyBody: {
+    minHeight: 160,
   },
   happyEmpty: {
     alignItems: "center",
