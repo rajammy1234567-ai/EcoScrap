@@ -23,16 +23,18 @@ export interface ScrapperApplicationPayload {
   experienceYears?: number;
   address: string;
   notes?: string;
-  bankAccountName?: string;
-  bankAccountNumber?: string;
-  bankIfsc?: string;
-  upiId?: string;
-  /** base64 data URIs */
+  /** base64 data URIs — bank details added later after approval */
   aadhaarFront: string;
   aadhaarBack: string;
   panCard: string;
   selfie?: string;
-  cancelledCheque?: string;
+}
+
+export interface ScrapperBankDetails {
+  upiId?: string;
+  bankAccountName?: string;
+  bankAccountNumber?: string;
+  bankIfsc?: string;
 }
 
 export interface ScrapperApplication {
@@ -80,6 +82,11 @@ export const scrapperService = {
 
   getWallet: (params?: { page?: number; limit?: number }) =>
     api.get('/api/v1/scrapper/wallet', { params }),
+
+  getBankDetails: () => api.get('/api/v1/scrapper/bank-details'),
+
+  updateBankDetails: (data: ScrapperBankDetails) =>
+    api.put('/api/v1/scrapper/bank-details', data),
 
   listJobs: (params?: { tab?: 'available' | 'mine' | 'all'; status?: string }) =>
     api.get('/api/v1/scrapper/jobs', { params }),

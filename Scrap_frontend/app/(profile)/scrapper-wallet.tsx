@@ -6,6 +6,10 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
+  TextInput,
+  Alert,
+  Platform,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -14,6 +18,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { scrapperService, WalletInfo } from "../../src/services/scrapper";
 import { useAuth } from "../../src/context/AuthContext";
 import { EmptyState } from "../../src/components/ui/EmptyState";
+import { Button } from "../../src/components/ui/Button";
 import {
   colors,
   radii,
@@ -51,6 +56,13 @@ export default function ScrapperWalletScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const [upiId, setUpiId] = useState("");
+  const [bankAccountName, setBankAccountName] = useState("");
+  const [bankAccountNumber, setBankAccountNumber] = useState("");
+  const [bankIfsc, setBankIfsc] = useState("");
+  const [savingBank, setSavingBank] = useState(false);
+  const [bankLoaded, setBankLoaded] = useState(false);
+
   const isScrapper =
     user?.role === "scrapper" || user?.scrapperStatus === "approved";
 
@@ -60,9 +72,20 @@ export default function ScrapperWalletScreen() {
       return;
     }
     try {
-      const res = await scrapperService.getWallet({ limit: 50 });
-      setWallet(res.data.wallet);
-      setTxs(res.data.transactions || []);
+      const [walletRes, bankRes] = await Promise.all([
+        scrapperService.getWallet({ limit: 50 }),
+        scrapperService.getBankDetails().catch(() => null),
+      ]);
+      setWallet(walletRes.data.wallet);
+      setTxs(walletRes.data.transactions || []);
+      const bd = bankRes?.data?.bankDetails;
+      if (bd) {
+        setUpiId(bd.upiId || "");
+        setBankAccountName(bd.bankAccountName || "");
+        setBankAccountNumber(bd.bankAccountNumber || "");
+        setBankIfsc(bd.bankIfsc || "");
+      }
+      setBankLoaded(true);
     } catch {
       setWallet(null);
       setTxs([]);
@@ -78,6 +101,31 @@ export default function ScrapperWalletScreen() {
       load();
     }, [load]),
   );
+
+  const showAlert = (title: string, msg: string) => {
+    if (Platform.OS === "web") window.alert(`${title}\n${msg}`);
+    else Alert.alert(title, msg);
+  };
+
+  const saveBank = async () => {
+    setSavingBank(true);
+    try {
+      await scrapperService.updateBankDetails({
+        upiId: upiId.trim(),
+        bankAccountName: bankAccountName.trim(),
+        bankAccountNumber: bankAccountNumber.trim(),
+        bankIfsc: bankIfsc.trim().toUpperCase(),
+      });
+      showAlert("Saved", "Bank / UPI details updated");
+    } catch (err: any) {
+      showAlert(
+        "Error",
+        err?.response?.data?.message || "Could not save bank details",
+      );
+    } finally {
+      setSavingBank(false);
+    }
+  };
 
   if (!isScrapper) {
     return (
@@ -139,6 +187,71 @@ export default function ScrapperWalletScreen() {
                 Pay scrap sellers from this balance. Admin tracks every rupee.
               </Text>
             </LinearGradient>
+
+            {/* Bank / UPI — only after becoming scrapper */}
+            <View style={styles.bankCard}>
+              <View style={styles.bankTitleRow}>
+                <Feather
+                  name="credit-card"
+                  size={18}
+                  color={colors.primary.green700}
+                />
+                <Text style={styles.bankTitle}>Bank / UPI details</Text>
+              </View>
+              <Text style={styles.bankHint}>
+                Add these after approval. Used for payouts and admin records.
+              </Text>
+
+              {!bankLoaded && loading ? (
+                <ActivityIndicator color={colors.primary.green600} />
+              ) : (
+                <>
+                  <Text style={styles.inputLabel}>UPI ID</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={upiId}
+                    onChangeText={setUpiId}
+                    placeholder="name@upi"
+                    autoCapitalize="none"
+                    placeholderTextColor={colors.neutral.gray400}
+                  />
+                  <Text style={styles.inputLabel}>Account holder name</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={bankAccountName}
+                    onChangeText={setBankAccountName}
+                    placeholder="As on passbook"
+                    placeholderTextColor={colors.neutral.gray400}
+                  />
+                  <Text style={styles.inputLabel}>Account number</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={bankAccountNumber}
+                    onChangeText={setBankAccountNumber}
+                    placeholder="9–18 digits"
+                    keyboardType="number-pad"
+                    placeholderTextColor={colors.neutral.gray400}
+                  />
+                  <Text style={styles.inputLabel}>IFSC</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={bankIfsc}
+                    onChangeText={(v) => setBankIfsc(v.toUpperCase())}
+                    placeholder="SBIN0001234"
+                    autoCapitalize="characters"
+                    placeholderTextColor={colors.neutral.gray400}
+                  />
+                  <Button
+                    label={savingBank ? "Saving..." : "Save bank details"}
+                    variant="primaryGreen"
+                    loading={savingBank}
+                    onPress={saveBank}
+                    style={{ marginTop: spacing.md }}
+                  />
+                </>
+              )}
+            </View>
+
             <Text style={styles.sectionTitle}>Transaction history</Text>
           </View>
         }
@@ -252,7 +365,7 @@ const styles = StyleSheet.create({
   balanceCard: {
     borderRadius: radii.xl,
     padding: spacing.xl,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
     ...shadows.sm,
   },
   balanceLabel: { color: "rgba(255,255,255,0.85)", fontSize: 14 },
@@ -276,6 +389,47 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.7)",
     fontSize: 11,
     marginTop: spacing.md,
+  },
+  bankCard: {
+    backgroundColor: colors.neutral.white,
+    borderRadius: radii.xl,
+    padding: spacing.lg,
+    marginBottom: spacing.xl,
+    ...shadows.sm,
+  },
+  bankTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  bankTitle: {
+    ...typography.bodySmMedium,
+    fontWeight: "700",
+    color: colors.neutral.black,
+  },
+  bankHint: {
+    ...typography.caption,
+    color: colors.neutral.gray600,
+    marginBottom: spacing.md,
+    lineHeight: 16,
+  },
+  inputLabel: {
+    ...typography.caption,
+    fontWeight: "600",
+    color: colors.neutral.gray600,
+    marginBottom: 4,
+    marginTop: spacing.sm,
+  },
+  input: {
+    height: 48,
+    borderRadius: radii.lg,
+    borderWidth: 1.5,
+    borderColor: colors.neutral.gray200,
+    paddingHorizontal: spacing.md,
+    ...typography.bodySm,
+    color: colors.neutral.black,
+    backgroundColor: colors.neutral.white,
   },
   sectionTitle: {
     ...typography.h3,

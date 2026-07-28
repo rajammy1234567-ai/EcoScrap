@@ -112,6 +112,7 @@ exports.applyAsScrapper = async (req, res) => {
     }
 
     // Support multipart (req.body fields + req.files) or JSON
+    // Bank / UPI are NOT collected at apply time — scrapper adds them after approval
     const body = req.body || {};
     const {
       fullName,
@@ -127,10 +128,6 @@ exports.applyAsScrapper = async (req, res) => {
       experienceYears,
       address,
       notes,
-      bankAccountName,
-      bankAccountNumber,
-      bankIfsc,
-      upiId,
     } = body;
 
     if (
@@ -175,13 +172,6 @@ exports.applyAsScrapper = async (req, res) => {
       });
     }
 
-    if (upiId && !isValidUpi(upiId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid UPI ID format",
-      });
-    }
-
     const files = req.files || {};
     let aadhaarFront =
       fileToDoc(files.aadhaarFront?.[0], "aadhaarFront") ||
@@ -195,12 +185,7 @@ exports.applyAsScrapper = async (req, res) => {
     let selfie =
       fileToDoc(files.selfie?.[0], "selfie") ||
       parseDoc(body.selfie || body.kyc?.selfie, "selfie");
-    let cancelledCheque =
-      fileToDoc(files.cancelledCheque?.[0], "cancelledCheque") ||
-      parseDoc(
-        body.cancelledCheque || body.kyc?.cancelledCheque,
-        "cancelledCheque",
-      );
+    // Cancelled cheque / bank docs not required at apply time
 
     if (!aadhaarFront || !aadhaarBack || !panCard) {
       return res.status(400).json({
@@ -225,16 +210,16 @@ exports.applyAsScrapper = async (req, res) => {
       experienceYears: Number(experienceYears) || 0,
       address: address.trim(),
       notes: notes?.trim() || "",
-      bankAccountName: bankAccountName?.trim() || "",
-      bankAccountNumber: bankAccountNumber?.trim() || "",
-      bankIfsc: bankIfsc?.trim()?.toUpperCase() || "",
-      upiId: upiId?.trim()?.toLowerCase() || "",
+      // Bank / UPI left empty — filled after approval via /bank-details
+      bankAccountName: "",
+      bankAccountNumber: "",
+      bankIfsc: "",
+      upiId: "",
       kyc: {
         aadhaarFront,
         aadhaarBack,
         panCard,
         selfie: selfie || undefined,
-        cancelledCheque: cancelledCheque || undefined,
       },
       kycComplete: true,
       status: "pending",
@@ -245,7 +230,7 @@ exports.applyAsScrapper = async (req, res) => {
     await notifyUser({
       userId,
       title: "Scrapper Application + KYC Submitted",
-      body: "Your KYC documents are under review. Admin will approve or reject soon.",
+      body: "Your KYC is under review. After approval, add bank / UPI details from Scrapper Wallet.",
       type: "scrapper_pending",
       data: { applicationId: String(application._id) },
     });
@@ -336,6 +321,128 @@ exports.getMyWallet = async (req, res) => {
       total,
       page: Number(page),
       razorpay: publicStatus(),
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * PUT /api/v1/scrapper/bank-details
+ * Approved scrapers add / update bank + UPI after onboarding (not at apply time).
+ */
+exports.updateBankDetails = async (req, res) => {
+  try {
+    if (!scrapperOnly(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only approved scrapers can add bank details",
+      });
+    }
+
+    const {
+      upiId,
+      bankAccountName,
+      bankAccountNumber,
+      bankIfsc,
+    } = req.body || {};
+
+    if (upiId && !isValidUpi(upiId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid UPI ID format (e.g. name@upi)",
+      });
+    }
+
+    const ifsc = bankIfsc ? String(bankIfsc).trim().toUpperCase() : "";
+    if (ifsc && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid IFSC format",
+      });
+    }
+
+    const acct = bankAccountNumber
+      ? String(bankAccountNumber).replace(/\s/g, "")
+      : "";
+    if (acct && !/^\d{9,18}$/.test(acct)) {
+      return res.status(400).json({
+        success: false,
+        message: "Bank account number must be 9–18 digits",
+      });
+    }
+
+    const profileUpdates = {};
+    if (upiId !== undefined) {
+      profileUpdates["scrapperProfile.upiId"] = String(upiId || "")
+        .trim()
+        .toLowerCase();
+    }
+    if (bankAccountName !== undefined) {
+      profileUpdates["scrapperProfile.bankAccountName"] = String(
+        bankAccountName || "",
+      ).trim();
+    }
+    if (bankAccountNumber !== undefined) {
+      profileUpdates["scrapperProfile.bankAccountNumber"] = acct;
+    }
+    if (bankIfsc !== undefined) {
+      profileUpdates["scrapperProfile.bankIfsc"] = ifsc;
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: profileUpdates },
+      { new: true },
+    ).select("scrapperProfile name email phone");
+
+    // Keep latest application in sync if present
+    await ScrapperApplication.findOneAndUpdate(
+      { user: req.user._id, status: "approved" },
+      {
+        $set: {
+          upiId: user.scrapperProfile?.upiId || "",
+          bankAccountName: user.scrapperProfile?.bankAccountName || "",
+          bankAccountNumber: user.scrapperProfile?.bankAccountNumber || "",
+          bankIfsc: user.scrapperProfile?.bankIfsc || "",
+        },
+      },
+      { sort: { reviewedAt: -1 } },
+    );
+
+    res.json({
+      success: true,
+      message: "Bank / UPI details saved",
+      bankDetails: {
+        upiId: user.scrapperProfile?.upiId || "",
+        bankAccountName: user.scrapperProfile?.bankAccountName || "",
+        bankAccountNumber: user.scrapperProfile?.bankAccountNumber || "",
+        bankIfsc: user.scrapperProfile?.bankIfsc || "",
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.getBankDetails = async (req, res) => {
+  try {
+    if (!scrapperOnly(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only approved scrapers have bank details",
+      });
+    }
+    const user = await User.findById(req.user._id).select("scrapperProfile");
+    const p = user?.scrapperProfile || {};
+    res.json({
+      success: true,
+      bankDetails: {
+        upiId: p.upiId || "",
+        bankAccountName: p.bankAccountName || "",
+        bankAccountNumber: p.bankAccountNumber || "",
+        bankIfsc: p.bankIfsc || "",
+      },
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -916,10 +1023,11 @@ exports.adminReviewApplication = async (req, res) => {
         serviceAreas: application.serviceAreas,
         aadhaarNumber: application.aadhaarNumber,
         panNumber: application.panNumber,
-        upiId: application.upiId,
-        bankAccountName: application.bankAccountName,
-        bankAccountNumber: application.bankAccountNumber,
-        bankIfsc: application.bankIfsc,
+        // Bank/UPI empty until scrapper fills after approval
+        upiId: application.upiId || "",
+        bankAccountName: application.bankAccountName || "",
+        bankAccountNumber: application.bankAccountNumber || "",
+        bankIfsc: application.bankIfsc || "",
         approvedAt: new Date(),
         signupBonusAmount: SIGNUP_BONUS,
       };

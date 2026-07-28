@@ -275,10 +275,6 @@ export default function BecomeScrapperScreen() {
   const [experience, setExperience] = useState("0");
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
-  const [upiId, setUpiId] = useState("");
-  const [bankAccountName, setBankAccountName] = useState("");
-  const [bankAccountNumber, setBankAccountNumber] = useState("");
-  const [bankIfsc, setBankIfsc] = useState("");
 
   const [aadhaarFront, setAadhaarFront] = useState<string | null>(null);
   const [aadhaarBack, setAadhaarBack] = useState<string | null>(null);
@@ -317,7 +313,6 @@ export default function BecomeScrapperScreen() {
           setExperience(String(app.experienceYears ?? 0));
           setAddress(app.address || "");
           setNotes(app.notes || "");
-          setUpiId(app.upiId || "");
         }
         try {
           const me = await api.get("/api/auth/me");
@@ -392,10 +387,6 @@ export default function BecomeScrapperScreen() {
         experienceYears: Number(experience) || 0,
         address: address.trim(),
         notes: notes.trim() || undefined,
-        upiId: upiId.trim() || undefined,
-        bankAccountName: bankAccountName.trim() || undefined,
-        bankAccountNumber: bankAccountNumber.trim() || undefined,
-        bankIfsc: bankIfsc.trim() || undefined,
         aadhaarFront,
         aadhaarBack,
         panCard,
@@ -406,9 +397,9 @@ export default function BecomeScrapperScreen() {
       if (user) setUser({ ...user, scrapperStatus: "pending" });
       showAlert(
         "Submitted!",
-        "KYC sent to admin. On approval you will get ₹" +
+        "KYC sent to admin. On approval you get ₹" +
           signupBonus +
-          " wallet credit + notification.",
+          " wallet credit. Bank / UPI details add later from Scrapper Wallet.",
       );
     } catch (err: any) {
       const msg =
@@ -593,40 +584,27 @@ export default function BecomeScrapperScreen() {
                 editable={!formLocked}
               />
               <Field
-                label="UPI ID"
-                value={upiId}
-                onChange={setUpiId}
-                placeholder="name@upi"
-                autoCapitalize="none"
-                editable={!formLocked}
-              />
-              <Field
-                label="Bank Account Name"
-                value={bankAccountName}
-                onChange={setBankAccountName}
-                editable={!formLocked}
-              />
-              <Field
-                label="Bank Account Number"
-                value={bankAccountNumber}
-                onChange={setBankAccountNumber}
-                keyboardType="number-pad"
-                editable={!formLocked}
-              />
-              <Field
-                label="IFSC"
-                value={bankIfsc}
-                onChange={(v) => setBankIfsc(v.toUpperCase())}
-                autoCapitalize="characters"
-                editable={!formLocked}
-              />
-              <Field
                 label="Notes"
                 value={notes}
                 onChange={setNotes}
                 multiline
                 editable={!formLocked}
               />
+
+              {!formLocked && (
+                <View style={styles.bankLaterNote}>
+                  <Feather
+                    name="info"
+                    size={16}
+                    color={colors.primary.green700}
+                  />
+                  <Text style={styles.bankLaterText}>
+                    Bank account / UPI details are not needed now. After admin
+                    approves you as a scrapper, add them from{" "}
+                    <Text style={{ fontWeight: "700" }}>Scrapper Wallet</Text>.
+                  </Text>
+                </View>
+              )}
 
               {!formLocked && (
                 <>
@@ -727,6 +705,23 @@ const styles = StyleSheet.create({
     color: colors.neutral.gray400,
     marginBottom: spacing.md,
     marginTop: -spacing.sm,
+  },
+  bankLaterNote: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.primary.green50,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.primary.green100,
+  },
+  bankLaterText: {
+    ...typography.caption,
+    color: colors.primary.green700,
+    flex: 1,
+    lineHeight: 18,
   },
   fieldWrap: { marginBottom: spacing.lg },
   fieldLabel: {

@@ -4,6 +4,8 @@ const {
   applyAsScrapper,
   getMyApplication,
   getMyWallet,
+  updateBankDetails,
+  getBankDetails,
   listScrapperJobs,
   acceptJob,
   completeJob,
@@ -25,6 +27,8 @@ const kycFields = kycUpload.fields([
 router.post("/apply", kycFields, applyAsScrapper);
 router.get("/my-application", getMyApplication);
 router.get("/wallet", getMyWallet);
+router.get("/bank-details", getBankDetails);
+router.put("/bank-details", updateBankDetails);
 router.get("/jobs", listScrapperJobs);
 router.put("/jobs/:id/accept", acceptJob);
 router.put("/jobs/:id/complete", completeJob);
