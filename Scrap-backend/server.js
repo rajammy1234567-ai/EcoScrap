@@ -111,7 +111,7 @@ app.get("/", (_req, res) => {
   res.status(200).json(apiInfo());
 });
 
-// ── Admin panel at /admin ──
+// ── Admin panel at /admin (UI only — uses backend API, no own Mongo) ──
 const adminDistCandidates = [
   path.join(__dirname, "public"),
   path.join(__dirname, "..", "Scrap-admin", "dist"),
@@ -121,17 +121,29 @@ const adminDist = adminDistCandidates.find((p) =>
 );
 
 if (adminDist) {
+  const adminIndex = path.join(adminDist, "index.html");
   console.log("Serving admin UI from:", adminDist, "→ /admin");
-  app.get("/admin", (_req, res) => res.redirect(301, "/admin/"));
+
+  // Static assets: /admin/assets/*  (no trailing-slash redirect games)
   app.use(
     "/admin",
     express.static(adminDist, {
-      index: "index.html",
+      index: false,
+      redirect: false,
       fallthrough: true,
     }),
   );
+
+  // SPA shell for /admin and any client route under it
+  app.get(["/admin", "/admin/"], (_req, res, next) => {
+    res.sendFile(adminIndex, (err) => {
+      if (err) next(err);
+    });
+  });
   app.use("/admin", (req, res, next) => {
-    res.sendFile(path.join(adminDist, "index.html"), (err) => {
+    if (req.method !== "GET" && req.method !== "HEAD") return next();
+    // Missing file under /admin → SPA index (not API JSON)
+    res.sendFile(adminIndex, (err) => {
       if (err) next(err);
     });
   });
@@ -144,7 +156,8 @@ if (adminDist) {
       .send(
         `<!DOCTYPE html><html><body style="font-family:sans-serif;padding:40px">
         <h1>Admin UI not built</h1>
-        <p><a href="/api/health">/api/health</a></p>
+        <p>Use this path after building admin into Scrap-backend/public.</p>
+        <p><a href="/api/health">API health</a></p>
       </body></html>`,
       );
   });
