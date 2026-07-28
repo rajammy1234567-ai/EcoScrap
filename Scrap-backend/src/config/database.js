@@ -17,7 +17,6 @@ async function ensureUserIndexes() {
   try {
     const col = mongoose.connection.collection('users');
 
-    // Unset empty strings so they are not indexed
     await col.updateMany(
       { $or: [{ phone: '' }, { phone: null }] },
       { $unset: { phone: '' } },
@@ -31,7 +30,6 @@ async function ensureUserIndexes() {
       { $unset: { googleId: '' } },
     );
 
-    // Phone users missing email → unique placeholder (avoids null email collision)
     const phoneOnly = await col
       .find({
         phone: { $type: 'string', $ne: '' },
@@ -79,32 +77,83 @@ async function ensureUserIndexes() {
   }
 }
 
+/** Resolve Mongo URI from common env names; strip accidental quotes. */
+function resolveMongoUri() {
+  const raw =
+    process.env.MONGODB_URI ||
+    process.env.MONGO_URI ||
+    process.env.MONGODB_URL ||
+    process.env.DATABASE_URL ||
+    process.env.MONGO_URL ||
+    '';
+  return String(raw).trim().replace(/^["']|["']$/g, '');
+}
+
+function logEnvDiagnostics() {
+  const allKeys = Object.keys(process.env).sort();
+  const mongoLike = allKeys.filter((k) => /mongo|database|^db_/i.test(k));
+  const important = allKeys.filter((k) =>
+    /mongo|jwt|node_env|port|render/i.test(k),
+  );
+  console.log('── Env diagnostics (names only, no secrets) ──');
+  console.log('NODE_ENV =', process.env.NODE_ENV || '(unset)');
+  console.log('PORT =', process.env.PORT || '(unset)');
+  console.log('MONGODB_URI set?', Boolean(process.env.MONGODB_URI));
+  console.log('MONGO_URI set?', Boolean(process.env.MONGO_URI));
+  console.log('MONGODB_URL set?', Boolean(process.env.MONGODB_URL));
+  console.log('DATABASE_URL set?', Boolean(process.env.DATABASE_URL));
+  console.log(
+    'mongo-like keys:',
+    mongoLike.length ? mongoLike.join(', ') : '(none)',
+  );
+  console.log(
+    'important keys:',
+    important.length ? important.join(', ') : '(none)',
+  );
+  console.log('total env keys count:', allKeys.length);
+  console.log('────────────────────────────────────────────');
+}
+
 const connectDB = async () => {
+  logEnvDiagnostics();
+
   try {
-    const uri = process.env.MONGODB_URI;
+    const uri = resolveMongoUri();
     if (!uri) {
+      console.error(
+        '❌ No Mongo connection string found in process.env.\n' +
+          '   On Render: open THIS web service → Environment → add key exactly:\n' +
+          '   MONGODB_URI = mongodb+srv://USER:PASS@cluster.../dbname?retryWrites=true&w=majority\n' +
+          '   Then Save + Manual Deploy. Local .env is never uploaded to Render.',
+      );
       throw new Error(
         'MONGODB_URI is not defined in environment variables. Please check your .env file or Render settings.',
       );
     }
 
-    // Prefer a real DB name in URI: ...mongodb.net/ecoscrap?appName=...
+    // Log host only (never password)
+    try {
+      const safe = uri.replace(/\/\/([^:]+):([^@]+)@/, '//$1:***@');
+      console.log('Connecting MongoDB:', safe.split('?')[0]);
+    } catch {
+      // ignore
+    }
+
     const conn = await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 15000,
       connectTimeoutMS: 15000,
     });
-    console.log(`MongoDB Connected: ${conn.connection.host} / db=${conn.connection.name}`);
+    console.log(
+      `✅ MongoDB Connected: ${conn.connection.host} / db=${conn.connection.name}`,
+    );
     await ensureUserIndexes();
     return conn;
   } catch (err) {
     console.error(`MongoDB connection Error: ${err.message}`);
     console.error(
-      '→ Fix: MongoDB Atlas → Network Access → Allow 0.0.0.0/0 (or your IP). Check MONGODB_URI password. Unpause free cluster if paused.',
+      '→ Fix: Render Environment MONGODB_URI + Atlas Network Access 0.0.0.0/0 + unpause cluster',
     );
-    // Don't keep serving API without DB — prevents "buffering timed out" on login
-    if (process.env.NODE_ENV === 'production') {
-      process.exit(1);
-    }
+    // Do NOT process.exit here — server can still serve /api health diagnostics
     return null;
   }
 };

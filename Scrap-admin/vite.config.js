@@ -1,11 +1,11 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// Production: admin is served from same host as API (ecoscrap-1.onrender.com)
-// so VITE_API_URL defaults to /api (same origin)
+// Production: admin UI is served at /admin on the same host as the API
+// Assets load from /admin/assets/* ; API still at /api (same origin)
 export default defineConfig({
   plugins: [react()],
-  base: "/",
+  base: "/admin/",
   build: {
     outDir: "dist",
     emptyOutDir: true,

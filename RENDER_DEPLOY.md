@@ -6,7 +6,8 @@ Ab backend **same URL** pe admin panel bhi serve karta hai:
 
 | URL | Kya |
 |-----|-----|
-| https://ecoscrap-1.onrender.com/ | Admin login panel |
+| https://ecoscrap-1.onrender.com/ | API home (JSON) |
+| https://ecoscrap-1.onrender.com/admin | Admin login panel |
 | https://ecoscrap-1.onrender.com/api/health | API health |
 | https://ecoscrap-1.onrender.com/api/... | All APIs |
 
@@ -45,9 +46,9 @@ Ab backend **same URL** pe admin panel bhi serve karta hai:
 
 ## After deploy
 
-1. Open https://ecoscrap-1.onrender.com/
-2. Admin login page aani chahiye (Cannot GET / nahi)
-3. API: https://ecoscrap-1.onrender.com/api/health
+1. Open https://ecoscrap-1.onrender.com/ → API JSON
+2. Admin: https://ecoscrap-1.onrender.com/admin
+3. Health: https://ecoscrap-1.onrender.com/api/health
 
 ## Local test
 

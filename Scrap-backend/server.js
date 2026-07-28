@@ -27,11 +27,61 @@ try {
 const app = express();
 
 app.use(cors());
-// KYC images (base64) need larger payloads
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
-// ── API routes ──
+function apiInfo() {
+  const dbState = mongoose.connection.readyState;
+  const dbLabel =
+    ["disconnected", "connected", "connecting", "disconnecting"][dbState] ||
+    "unknown";
+  const hasUri = Boolean(
+    process.env.MONGODB_URI ||
+      process.env.MONGO_URI ||
+      process.env.MONGODB_URL ||
+      process.env.DATABASE_URL,
+  );
+  return {
+    name: "EcoScrap API",
+    base: "/api",
+    status: dbState === 1 ? "OK" : "DEGRADED",
+    mongo: dbLabel,
+    mongodbUriConfigured: hasUri,
+    timestamp: new Date(),
+    health: "/api/health",
+    adminPanel: "/admin",
+    hint: hasUri
+      ? dbState === 1
+        ? null
+        : "MONGODB_URI is set but DB not connected yet — check Atlas Network Access / password"
+      : "MONGODB_URI missing on this Render service. Environment → Add MONGODB_URI → Save → Manual Deploy",
+    endpoints: {
+      auth: "/api/auth",
+      health: "/api/health",
+      pickups: "/api/v1/pickups",
+      scrapper: "/api/v1/scrapper",
+      location: "/api/v1/location",
+      notifications: "/api/v1/notifications",
+      scrap: "/api/v1/scrap",
+      admin: "/api/admin",
+    },
+  };
+}
+
+// If DB down, return clear 503 on API (except health/info)
+app.use("/api", (req, res, next) => {
+  if (req.path === "/" || req.path === "" || req.path === "/health") {
+    return next();
+  }
+  if (mongoose.connection.readyState === 1) return next();
+  return res.status(503).json({
+    success: false,
+    message:
+      "Database not connected. On Render set Environment variable MONGODB_URI for this web service, then redeploy.",
+    ...apiInfo(),
+  });
+});
+
 app.use("/api/auth", authRoutes);
 app.use("/api/scraps", scrapRoutes);
 app.use("/api/admin", adminRoutes);
@@ -41,21 +91,27 @@ app.use("/api/v1/scrap", publicScrapRoutes);
 app.use("/api/v1/pickups", pickupRoutes);
 app.use("/api/v1/scrapper", scrapperRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
-app.get("/api/health", (req, res) => {
-  const dbState = mongoose.connection.readyState;
-  // 0=disconnected 1=connected 2=connecting 3=disconnecting
-  const dbLabel = ["disconnected", "connected", "connecting", "disconnecting"][
-    dbState
-  ] || "unknown";
-  res.json({
-    status: dbState === 1 ? "OK" : "DEGRADED",
-    timestamp: new Date(),
-    mongo: dbLabel,
+
+app.get(["/api", "/api/"], (_req, res) => {
+  res.status(200).json(apiInfo());
+});
+
+app.get("/api/health", (_req, res) => {
+  const info = apiInfo();
+  res.status(info.status === "OK" ? 200 : 503).json({
+    status: info.status,
+    timestamp: info.timestamp,
+    mongo: info.mongo,
+    mongodbUriConfigured: info.mongodbUriConfigured,
+    hint: info.hint,
   });
 });
 
-// ── Admin panel (Vite build) ──
-// Prefer Scrap-backend/public (copied on deploy); fallback Scrap-admin/dist
+app.get("/", (_req, res) => {
+  res.status(200).json(apiInfo());
+});
+
+// ── Admin panel at /admin ──
 const adminDistCandidates = [
   path.join(__dirname, "public"),
   path.join(__dirname, "..", "Scrap-admin", "dist"),
@@ -65,29 +121,32 @@ const adminDist = adminDistCandidates.find((p) =>
 );
 
 if (adminDist) {
-  console.log("Serving admin UI from:", adminDist);
-  app.use(express.static(adminDist));
-  // SPA fallback — anything not /api/* → index.html
-  app.get("*", (req, res, next) => {
-    if (req.path.startsWith("/api")) return next();
+  console.log("Serving admin UI from:", adminDist, "→ /admin");
+  app.get("/admin", (_req, res) => res.redirect(301, "/admin/"));
+  app.use(
+    "/admin",
+    express.static(adminDist, {
+      index: "index.html",
+      fallthrough: true,
+    }),
+  );
+  app.use("/admin", (req, res, next) => {
     res.sendFile(path.join(adminDist, "index.html"), (err) => {
       if (err) next(err);
     });
   });
 } else {
-  console.warn(
-    "Admin UI build not found. Run: npm run build:admin (from Scrap-backend)",
-  );
-  app.get("/", (_req, res) => {
+  console.warn("Admin UI build not found");
+  app.get(["/admin", "/admin/"], (_req, res) => {
     res
-      .status(200)
+      .status(503)
       .type("html")
-      .send(`<!DOCTYPE html><html><body style="font-family:sans-serif;padding:40px">
-        <h1>EcoScrap API</h1>
-        <p>Backend is running. Admin UI is not built yet.</p>
+      .send(
+        `<!DOCTYPE html><html><body style="font-family:sans-serif;padding:40px">
+        <h1>Admin UI not built</h1>
         <p><a href="/api/health">/api/health</a></p>
-        <p>Deploy build: <code>npm run build:admin</code> then restart.</p>
-      </body></html>`);
+      </body></html>`,
+      );
   });
 }
 
@@ -96,13 +155,17 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 async function start() {
+  console.log("Booting EcoScrap backend…");
   const conn = await connectDB();
-  if (!conn && process.env.NODE_ENV === "production") {
-    // connectDB already logs + may exit; hard stop if still no DB
-    console.error("Refusing to start without MongoDB in production");
-    process.exit(1);
+  if (!conn) {
+    console.error(
+      "⚠️  Starting WITHOUT MongoDB — API will return 503 until MONGODB_URI is fixed on Render.",
+    );
   }
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`API:  /api   health: /api/health   admin: /admin`);
+  });
 }
 
 start().catch((err) => {
