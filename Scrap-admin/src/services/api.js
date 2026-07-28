@@ -1,13 +1,19 @@
 import axios from "axios";
 
-// Production (same host as admin UI): /api
-// Dev override: .env VITE_API_URL=https://ecoscrap-1.onrender.com/api
+/**
+ * Backend API base.
+ * MUST point at the Render service that has MONGODB_URI (ecoscrap-1).
+ * Do NOT use relative "/api" when admin is opened on ecoscrap.onrender.com —
+ * that host often has no Mongo and returns 503 "Database not connected".
+ */
+const DEFAULT_PROD_API = "https://ecoscrap-1.onrender.com/api";
+
 const API_URL = (
   import.meta.env.VITE_API_URL ||
-  (import.meta.env.PROD ? "/api" : "https://ecoscrap-1.onrender.com/api")
+  (import.meta.env.PROD ? DEFAULT_PROD_API : DEFAULT_PROD_API)
 ).replace(/\/$/, "");
 
-if (import.meta.env.DEV) {
+if (typeof window !== "undefined") {
   console.log("[Admin API]", API_URL);
 }
 
@@ -26,7 +32,6 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
   if (typeof FormData !== "undefined" && config.data instanceof FormData) {
-    // Axios default Content-Type: application/json breaks multipart
     if (config.headers) {
       delete config.headers["Content-Type"];
     }
