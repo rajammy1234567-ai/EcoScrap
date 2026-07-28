@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Image, Pressable, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -6,8 +6,10 @@ import { Feather } from '@expo/vector-icons';
 import { Button } from '../../src/components/ui/Button';
 import { storage } from '../../src/services/storage';
 import { requestNotificationPermission } from '../../src/services/notifications';
+import { requestLocationPermission } from '../../src/services/location';
 import { AppImages } from '../../src/assets/images';
 import { colors, radii, spacing, typography, shadows } from '../../src/theme';
+import { useState } from 'react';
 
 const PERMISSIONS = [
   {
@@ -18,7 +20,7 @@ const PERMISSIONS = [
   {
     icon: 'map-pin',
     title: 'Location',
-    desc: 'Accurate doorstep pickup at your address',
+    desc: 'Match scrap collectors within 10 km of you',
   },
   {
     icon: 'camera',
@@ -29,11 +31,31 @@ const PERMISSIONS = [
 
 export default function PermissionsScreen() {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
-  const finish = async () => {
-    await requestNotificationPermission();
-    await storage.setOnboarded();
-    router.replace('/(auth)/enter-mobile');
+  const finish = async (requestPerms: boolean) => {
+    setLoading(true);
+    try {
+      if (requestPerms) {
+        const [notifOk, locOk] = await Promise.all([
+          requestNotificationPermission(),
+          requestLocationPermission(),
+        ]);
+        if (!locOk && Platform.OS !== 'web') {
+          Alert.alert(
+            'Location recommended',
+            'Enable location so scrapers within 10 km can find your pickups. You can turn it on later in settings.',
+          );
+        }
+        if (!notifOk && Platform.OS !== 'web') {
+          // soft skip — user can enable later
+        }
+      }
+      await storage.setOnboarded();
+      router.replace('/(auth)/enter-mobile');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -63,7 +85,7 @@ export default function PermissionsScreen() {
           </View>
           <Text style={styles.title}>Almost there</Text>
           <Text style={styles.subtitle}>
-            Enable permissions for the best pickup experience
+            Enable location & alerts so nearby scrapers (within 10 km) get your pickup requests
           </Text>
         </View>
 
@@ -85,11 +107,12 @@ export default function PermissionsScreen() {
         <View style={styles.cta}>
           <Button
             label="Allow & Continue"
-            onPress={finish}
+            onPress={() => finish(true)}
             variant="primaryDark"
             style={styles.primaryBtn}
+            loading={loading}
           />
-          <Pressable onPress={finish} style={styles.laterBtn}>
+          <Pressable onPress={() => finish(false)} style={styles.laterBtn} disabled={loading}>
             <Text style={styles.laterText}>Maybe later</Text>
           </Pressable>
         </View>

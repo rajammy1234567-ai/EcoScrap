@@ -6,17 +6,20 @@ import {
   ScrollView,
   Alert,
   Pressable,
-  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import * as Location from "expo-location";
 import { Input } from "../../src/components/ui/Input";
 import { Chip } from "../../src/components/ui/Chip";
 import { Button } from "../../src/components/ui/Button";
 import { Header } from "../../src/components/shared/Header";
 import { userService } from "../../src/services/user";
-import { locationService } from "../../src/services/location";
+import {
+  locationService,
+  getCurrentCoords,
+  reverseGeocode,
+  syncLocationToServer,
+} from "../../src/services/location";
 import { Feather } from "@expo/vector-icons";
 import { colors, spacing, typography, radii } from "../../src/theme";
 
@@ -29,6 +32,7 @@ export default function AddAddressScreen() {
   const [locality, setLocality] = useState("");
   const [city, setCity] = useState("");
   const [pincode, setPincode] = useState("");
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetchingLocation, setFetchingLocation] = useState(false);
   const [serviceError, setServiceError] = useState<string | null>(null);
@@ -37,62 +41,27 @@ export default function AddAddressScreen() {
   const handleGetCurrentLocation = async () => {
     setFetchingLocation(true);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
+      const current = await getCurrentCoords();
+      if (!current) {
         Alert.alert(
           "Permission denied",
-          "Allow location access to auto-fill address.",
+          "Allow location access to auto-fill address and match scrapers within 10 km.",
         );
         return;
       }
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
 
-      const latitude = location.coords.latitude;
-      const longitude = location.coords.longitude;
+      setCoords(current);
+      // Keep backend lastLocation in sync
+      locationService
+        .updateLocation(current.latitude, current.longitude)
+        .catch(() => {});
 
-      if (Platform.OS === "web") {
-        const resp = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`,
-        );
-        const data = await resp.json();
-        const address = data.address || {};
-
-        const road =
-          address.road || address.pedestrian || address.cycleway || "";
-        const suburb =
-          address.suburb || address.village || address.hamlet || "";
-        const localityValue = [road, suburb].filter(Boolean).join(", ");
-        const cityValue =
-          address.city ||
-          address.town ||
-          address.village ||
-          address.county ||
-          "";
-        const postalCode = address.postcode || "";
-
-        setLocality(localityValue);
-        setCity(cityValue);
-        setPincode(postalCode);
-        setServiceError(null);
-        return;
-      }
-
-      const [address] = await Location.reverseGeocodeAsync({
-        latitude,
-        longitude,
-      });
-
-      if (address) {
-        setLocality(
-          address.street || address.subregion || address.district || "",
-        );
-        setCity(address.city || address.region || "");
-        setPincode(address.postalCode || "");
-        setServiceError(null);
-      }
-    } catch (err) {
+      const geo = await reverseGeocode(current);
+      setLocality(geo.locality);
+      setCity(geo.city);
+      setPincode(geo.pincode);
+      setServiceError(null);
+    } catch {
       Alert.alert("Error", "Could not fetch current location.");
     } finally {
       setFetchingLocation(false);
@@ -124,13 +93,28 @@ export default function AddAddressScreen() {
     }
     setLoading(true);
     try {
+      // Prefer coords already captured; otherwise try GPS once more
+      let latLng = coords;
+      if (!latLng) {
+        latLng = await getCurrentCoords();
+        if (latLng) setCoords(latLng);
+      }
+
       const { data } = await userService.addAddress({
         type,
         flat_number: flat,
         locality,
         city,
         pincode,
+        ...(latLng
+          ? { latitude: latLng.latitude, longitude: latLng.longitude }
+          : {}),
       });
+
+      if (latLng) {
+        await syncLocationToServer().catch(() => {});
+      }
+
       const addresses = data.addresses || [];
       const newAddressId = addresses[addresses.length - 1]?.id;
       router.replace(

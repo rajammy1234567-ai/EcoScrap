@@ -1,10 +1,24 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, CheckCircle, XCircle } from "lucide-react";
+import { adminAPI } from "../services/api";
 
 export default function PickupDetailModal({ pickup, onClose, onUpdate }) {
   const [selectedStatus, setSelectedStatus] = useState(pickup.status);
   const [adminNote, setAdminNote] = useState(pickup.adminNote || "");
   const [loading, setLoading] = useState(false);
+  const [scrapers, setScrapers] = useState([]);
+  const [scrapperId, setScrapperId] = useState(
+    pickup.assignedScrapper?._id || pickup.assignedScrapper || "",
+  );
+  const [assigning, setAssigning] = useState(false);
+  const [assignMsg, setAssignMsg] = useState("");
+
+  useEffect(() => {
+    adminAPI
+      .getScrapers()
+      .then((res) => setScrapers(res.data.scrapers || []))
+      .catch(() => setScrapers([]));
+  }, []);
 
   const handleUpdateStatus = async () => {
     setLoading(true);
@@ -12,6 +26,21 @@ export default function PickupDetailModal({ pickup, onClose, onUpdate }) {
       await onUpdate(pickup.id, selectedStatus, adminNote);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAssign = async () => {
+    if (!scrapperId) return;
+    setAssigning(true);
+    setAssignMsg("");
+    try {
+      await adminAPI.assignScrapper(pickup.id || pickup._id, scrapperId);
+      setAssignMsg("Scrapper assigned & notified!");
+      setSelectedStatus("accepted");
+    } catch (err) {
+      setAssignMsg(err.response?.data?.message || "Failed to assign");
+    } finally {
+      setAssigning(false);
     }
   };
 
@@ -173,6 +202,57 @@ export default function PickupDetailModal({ pickup, onClose, onUpdate }) {
               </div>
             </div>
           )}
+
+          {/* Assign Scrapper */}
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              🛠️ Assign Scrapper
+            </h3>
+            {pickup.assignedScrapper && (
+              <p className="text-sm text-gray-600 mb-2">
+                Currently assigned:{" "}
+                <strong>
+                  {pickup.assignedScrapper.name ||
+                    pickup.assignedScrapper.phone ||
+                    "Scrapper"}
+                </strong>
+              </p>
+            )}
+            <div className="flex gap-3 items-end">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select approved scrapper
+                </label>
+                <select
+                  value={scrapperId}
+                  onChange={(e) => setScrapperId(e.target.value)}
+                  className="input-field"
+                >
+                  <option value="">— Select —</option>
+                  {scrapers.map((s) => (
+                    <option key={s._id} value={s._id}>
+                      {s.name} {s.phone ? `(${s.phone})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={handleAssign}
+                disabled={!scrapperId || assigning}
+                className="btn-primary disabled:opacity-50"
+              >
+                {assigning ? "..." : "Assign"}
+              </button>
+            </div>
+            {assignMsg && (
+              <p className="text-sm text-green-700 mt-2">{assignMsg}</p>
+            )}
+            {scrapers.length === 0 && (
+              <p className="text-sm text-gray-500 mt-2">
+                No approved scrapers yet. Review applications under Scrapers.
+              </p>
+            )}
+          </div>
 
           {/* Status Update Section */}
           <div className="border-t pt-6">

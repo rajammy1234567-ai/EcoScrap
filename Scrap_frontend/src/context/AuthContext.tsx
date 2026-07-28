@@ -48,6 +48,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email: rawUser.email || null,
       referral_code: rawUser.referral_code || null,
       category: rawUser.category || 'individual',
+      role: rawUser.role || 'user',
+      scrapperStatus: rawUser.scrapperStatus || 'none',
     };
   };
 

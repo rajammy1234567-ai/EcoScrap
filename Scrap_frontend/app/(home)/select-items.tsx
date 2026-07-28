@@ -266,11 +266,31 @@ export default function SelectItemsScreen() {
       }
 
       try {
+        // Attach GPS so nearby scrapers (10 km) can be notified
+        let latitude: number | undefined;
+        let longitude: number | undefined;
+        try {
+          const { getCurrentCoords, syncLocationToServer } = await import(
+            "../../src/services/location"
+          );
+          const coords = await getCurrentCoords();
+          if (coords) {
+            latitude = coords.latitude;
+            longitude = coords.longitude;
+            syncLocationToServer().catch(() => {});
+          }
+        } catch {
+          // proceed without live GPS — address coords may still exist on server
+        }
+
         const res = await pickupService.create({
           address_id: selectedAddr,
           items: itemsPayload,
           image_urls: [],
           scheduled_at: scheduled.toISOString(),
+          ...(latitude != null && longitude != null
+            ? { latitude, longitude }
+            : {}),
         });
 
         if (!res?.data?.pickup?.id) {

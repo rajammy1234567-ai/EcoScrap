@@ -9,10 +9,12 @@ import {
   ScrollView,
   Dimensions,
   Image,
+  RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   Easing,
@@ -92,22 +94,63 @@ const FALLBACK: RateSection[] = [
   },
 ];
 
-const FEATURED = [
-  { name: 'AC (Air Conditioner)', rate: 2000, unit: 'Unit', tag: 'Top' },
-  { name: 'Fridge', rate: 1000, unit: 'Unit', tag: 'Hot' },
-  { name: 'Washing Machine', rate: 800, unit: 'Unit', tag: 'Deal' },
-  { name: 'Iron / Steel', rate: 28, unit: 'Kg', tag: 'Daily' },
-];
+const FEATURED_TAGS = ['Top', 'Hot', 'Deal', 'Daily'] as const;
 
-const TICKER_ITEMS = [
-  { label: 'Iron', rate: '₹17/kg' },
-  { label: 'AC', rate: '₹2000/u' },
-  { label: 'Fridge', rate: '₹1000/u' },
-  { label: 'Washer', rate: '₹800/u' },
-  { label: 'Copper', rate: '₹450/kg' },
-  { label: 'Laptop', rate: '₹500/u' },
-  { label: 'Newspaper', rate: '₹14/kg' },
-];
+function flattenItems(sections: RateSection[]): RateItem[] {
+  return sections.flatMap((s) => s.data);
+}
+
+function buildFeatured(sections: RateSection[]) {
+  const items = flattenItems(sections)
+    .slice()
+    .sort((a, b) => (b.rate_per_kg || 0) - (a.rate_per_kg || 0))
+    .slice(0, 4);
+  if (items.length === 0) {
+    return [
+      { name: 'AC (Air Conditioner)', rate: 2000, unit: 'Unit', tag: 'Top', image_url: null as string | null },
+      { name: 'Fridge', rate: 1000, unit: 'Unit', tag: 'Hot', image_url: null },
+      { name: 'Washing Machine', rate: 800, unit: 'Unit', tag: 'Deal', image_url: null },
+      { name: 'Iron / Steel', rate: 28, unit: 'Kg', tag: 'Daily', image_url: null },
+    ];
+  }
+  return items.map((it, i) => ({
+    name: it.name,
+    rate: it.rate_per_kg,
+    unit: it.unit || 'Kg',
+    tag: FEATURED_TAGS[i] || 'Live',
+    image_url: it.image_url || null,
+  }));
+}
+
+function buildTicker(sections: RateSection[]) {
+  const items = flattenItems(sections).slice(0, 10);
+  if (items.length === 0) {
+    return [
+      { label: 'Iron', rate: '₹28/kg' },
+      { label: 'Aluminium', rate: '₹200/kg' },
+      { label: 'Brass', rate: '₹400/kg' },
+    ];
+  }
+  return items.map((it) => ({
+    label: it.name.split(/[/(]/)[0].trim().slice(0, 14),
+    rate: `₹${it.rate_per_kg}/${(it.unit || 'Kg').toLowerCase().startsWith('u') ? 'u' : 'kg'}`,
+  }));
+}
+
+function mapApiCategories(categories: any[]): RateSection[] {
+  if (!Array.isArray(categories)) return [];
+  return categories
+    .map((c: any) => ({
+      title: String(c.name || c.title || 'Other'),
+      data: (c.items || []).map((i: any) => ({
+        name: String(i.name || ''),
+        rate_per_kg: Number(i.rate_per_kg ?? i.rate ?? 0),
+        unit: String(i.unit || 'Kg'),
+        image_url: i.image_url || i.imageUrl || null,
+      })),
+    }))
+    .filter((s) => s.title && s.data.length > 0);
+}
 
 const CAT_ICON: Record<string, string> = {
   'IT-E Waste': 'monitor',
@@ -210,23 +253,24 @@ function LivePulse() {
   );
 }
 
-function AutoTicker() {
+function AutoTicker({ items }: { items: { label: string; rate: string }[] }) {
   const x = useSharedValue(0);
-  const row = [...TICKER_ITEMS, ...TICKER_ITEMS];
+  const list = items.length > 0 ? items : [{ label: 'Rates', rate: 'Live' }];
+  const row = [...list, ...list];
   const itemW = 118;
-  const totalW = TICKER_ITEMS.length * itemW;
+  const totalW = Math.max(list.length, 1) * itemW;
 
   useEffect(() => {
     x.value = 0;
     x.value = withRepeat(
       withTiming(-totalW, {
-        duration: totalW * 28,
+        duration: Math.max(totalW * 28, 8000),
         easing: Easing.linear,
       }),
       -1,
       false,
     );
-  }, [x, totalW]);
+  }, [x, totalW, list.length]);
 
   const style = useAnimatedStyle(() => ({
     transform: [{ translateX: x.value }],
@@ -315,19 +359,40 @@ export default function ScrapRatesScreen() {
   const [allSections, setAllSections] = useState<RateSection[]>(FALLBACK);
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('ALL');
+  const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [live, setLive] = useState(false);
 
-  useEffect(() => {
-    scrapService
-      .getRateCard()
-      .then((r) => {
-        const mapped = r.data.categories?.map((c: any) => ({
-          title: c.name,
-          data: c.items,
-        }));
-        if (mapped?.length > 0) setAllSections(mapped);
-      })
-      .catch(() => {});
+  const loadRates = useCallback(async (isPull = false) => {
+    if (isPull) setRefreshing(true);
+    try {
+      // cache-bust so admin updates always show
+      const r = await scrapService.getRateCard();
+      const mapped = mapApiCategories(r.data?.categories || []);
+      if (mapped.length > 0) {
+        setAllSections(mapped);
+        setLive(true);
+      }
+    } catch (e) {
+      console.warn('[Rates] load failed, using fallback', e);
+      setLive(false);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
+
+  // First mount
+  useEffect(() => {
+    loadRates();
+  }, [loadRates]);
+
+  // Refresh every time user opens Rates tab (admin changes visible)
+  useFocusEffect(
+    useCallback(() => {
+      loadRates();
+    }, [loadRates]),
+  );
 
   const filters = useMemo(
     () => ['ALL', ...allSections.map((s) => s.title)],
@@ -338,6 +403,9 @@ export default function ScrapRatesScreen() {
     () => allSections.reduce((n, s) => n + s.data.length, 0),
     [allSections],
   );
+
+  const featured = useMemo(() => buildFeatured(allSections), [allSections]);
+  const tickerItems = useMemo(() => buildTicker(allSections), [allSections]);
 
   const filteredSections = useMemo(
     () =>
@@ -360,18 +428,20 @@ export default function ScrapRatesScreen() {
   const ListHeader = useCallback(
     () => (
       <View style={styles.listHeader}>
-        {/* Featured — same green theme only */}
+        {/* Featured — built from live admin rates */}
         <View style={styles.featuredBlock}>
           <View style={styles.featuredHead}>
             <Text style={styles.featuredTitle}>Featured rates</Text>
-            <Text style={styles.featuredSub}>Best prices right now</Text>
+            <Text style={styles.featuredSub}>
+              {live ? 'Live from admin · pull to refresh' : 'Best prices right now'}
+            </Text>
           </View>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.featuredRow}
           >
-            {FEATURED.map((f) => (
+            {featured.map((f) => (
               <View key={f.name} style={styles.featuredTile}>
                 <LinearGradient
                   colors={[colors.primary.green700, colors.primary.green500]}
@@ -382,14 +452,22 @@ export default function ScrapRatesScreen() {
                   <View style={styles.featuredTag}>
                     <Text style={styles.featuredTagText}>{f.tag}</Text>
                   </View>
-                  <View style={styles.featuredIconBubble}>
-                    <ScrapIcon
-                      name={f.name}
-                      variant="compact"
-                      size={18}
-                      color={colors.neutral.white}
+                  {f.image_url ? (
+                    <Image
+                      source={{ uri: f.image_url }}
+                      style={styles.featuredPhoto}
+                      resizeMode="cover"
                     />
-                  </View>
+                  ) : (
+                    <View style={styles.featuredIconBubble}>
+                      <ScrapIcon
+                        name={f.name}
+                        variant="compact"
+                        size={18}
+                        color={colors.neutral.white}
+                      />
+                    </View>
+                  )}
                   <Text style={styles.featuredName} numberOfLines={2}>
                     {f.name}
                   </Text>
@@ -454,7 +532,7 @@ export default function ScrapRatesScreen() {
         </ScrollView>
       </View>
     ),
-    [search, filters, activeFilter],
+    [search, filters, activeFilter, featured, live],
   );
 
   return (
@@ -480,8 +558,8 @@ export default function ScrapRatesScreen() {
           </View>
         </View>
 
-        {/* Auto-scrolling rate ticker */}
-        <AutoTicker />
+        {/* Auto-scrolling rate ticker (live) */}
+        <AutoTicker items={tickerItems} />
 
         <Pressable
           style={styles.headerCta}
@@ -495,6 +573,13 @@ export default function ScrapRatesScreen() {
         </Pressable>
       </LinearGradient>
 
+      {loading && !refreshing ? (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="large" color={colors.primary.green600} />
+          <Text style={styles.loadingText}>Loading live rates…</Text>
+        </View>
+      ) : null}
+
       <FlatList
         style={styles.list}
         data={filteredSections}
@@ -504,6 +589,14 @@ export default function ScrapRatesScreen() {
           { paddingBottom: bottomInset + spacing.lg },
           filteredSections.length === 0 && styles.emptyListContent,
         ]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => loadRates(true)}
+            colors={[colors.primary.green600]}
+            tintColor={colors.primary.green600}
+          />
+        }
         ListHeaderComponent={ListHeader}
         renderItem={({ item: section }) => (
           <View style={styles.categoryBlock}>
@@ -867,6 +960,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: spacing.sm,
+  },
+  featuredPhoto: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    marginVertical: spacing.sm,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  loadingBox: {
+    position: 'absolute',
+    top: '45%',
+    alignSelf: 'center',
+    zIndex: 10,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  loadingText: {
+    ...typography.caption,
+    color: colors.neutral.gray600,
+    fontWeight: '600' as const,
   },
   featuredName: {
     fontSize: 12,

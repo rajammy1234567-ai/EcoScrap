@@ -1,3 +1,6 @@
+const User = require("../models/User");
+const { isValidCoords, NEARBY_RADIUS_KM } = require("../utils/geo");
+
 exports.checkService = async (req, res) => {
   try {
     const { pincode } = req.body;
@@ -35,5 +38,69 @@ exports.notifyMe = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+};
+
+/**
+ * PUT /api/v1/location/update
+ * Body: { latitude, longitude }
+ * Stores live GPS for the authenticated user (customer or scrapper).
+ */
+exports.updateLocation = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: "Not authorized" });
+    }
+
+    const { latitude, longitude } = req.body || {};
+    if (!isValidCoords(latitude, longitude)) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid latitude and longitude are required",
+      });
+    }
+
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        lastLocation: {
+          latitude: lat,
+          longitude: lng,
+          updatedAt: new Date(),
+        },
+      },
+      { new: true },
+    ).select("lastLocation role scrapperStatus");
+
+    res.json({
+      success: true,
+      message: "Location updated",
+      lastLocation: user.lastLocation,
+      nearbyRadiusKm: NEARBY_RADIUS_KM,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * GET /api/v1/location/me
+ */
+exports.getMyLocation = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: "Not authorized" });
+    }
+    const user = await User.findById(req.user._id).select("lastLocation");
+    res.json({
+      success: true,
+      lastLocation: user?.lastLocation || null,
+      nearbyRadiusKm: NEARBY_RADIUS_KM,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };

@@ -7,6 +7,8 @@ export const pickupService = {
     image_urls?: string[];
     scheduled_at?: string;
     notes?: string;
+    latitude?: number;
+    longitude?: number;
   }) => api.post('/api/v1/pickups', data),
 
   list: (params?: { status?: string; page?: number; limit?: number }) =>

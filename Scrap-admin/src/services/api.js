@@ -51,6 +51,24 @@ export const adminAPI = {
   // Users
   getAllUsers: (params) => api.get("/admin/users", { params }),
 
+  // Scrapper applications + KYC
+  getScrapperApplications: (params) =>
+    api.get("/admin/scrapper-applications", { params }),
+  getScrapperApplication: (id) =>
+    api.get(`/admin/scrapper-applications/${id}`),
+  reviewScrapperApplication: (id, data) =>
+    api.put(`/admin/scrapper-applications/${id}/review`, data),
+  getScrapers: () => api.get("/admin/scrapers"),
+  assignScrapper: (pickupId, scrapperId) =>
+    api.put(`/admin/pickups/${pickupId}/assign-scrapper`, { scrapperId }),
+
+  // Wallet / ledger / payouts
+  getWallets: () => api.get("/admin/wallets"),
+  getWalletTransactions: (params) =>
+    api.get("/admin/wallet-transactions", { params }),
+  topupWallet: (data) => api.post("/admin/wallets/topup", data),
+  getPayouts: (params) => api.get("/admin/payouts", { params }),
+
   // Rate catalog (prices + permanent images)
   getRates: () => api.get("/admin/rates"),
   updateRate: (id, data) => api.put(`/admin/rates/${id}`, data),

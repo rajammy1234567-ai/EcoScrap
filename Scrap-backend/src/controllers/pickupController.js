@@ -1,24 +1,124 @@
 const Pickup = require("../models/Pickup");
+const User = require("../models/User");
+const { notifyUser } = require("../utils/notify");
+const {
+  isValidCoords,
+  haversineKm,
+  NEARBY_RADIUS_KM,
+} = require("../utils/geo");
+
+/**
+ * Notify all approved scrapers within NEARBY_RADIUS_KM of the pickup location.
+ */
+async function notifyNearbyScrapers(pickup, addressLabel) {
+  const lat = pickup.location?.latitude;
+  const lng = pickup.location?.longitude;
+  if (!isValidCoords(lat, lng)) {
+    return { notified: 0, reason: "no_pickup_coords" };
+  }
+
+  const scrapers = await User.find({
+    isActive: { $ne: false },
+    $or: [{ role: "scrapper" }, { scrapperStatus: "approved" }],
+    "lastLocation.latitude": { $exists: true, $ne: null },
+    "lastLocation.longitude": { $exists: true, $ne: null },
+  }).select("_id name lastLocation pushToken");
+
+  const nearby = scrapers.filter((s) => {
+    const d = haversineKm(
+      lat,
+      lng,
+      s.lastLocation?.latitude,
+      s.lastLocation?.longitude,
+    );
+    return d <= NEARBY_RADIUS_KM;
+  });
+
+  const place = addressLabel || "nearby";
+  await Promise.all(
+    nearby.map((s) => {
+      const dist = haversineKm(
+        lat,
+        lng,
+        s.lastLocation.latitude,
+        s.lastLocation.longitude,
+      );
+      return notifyUser({
+        userId: s._id,
+        title: "New Pickup Nearby 📍",
+        body: `New scrap pickup within ${dist.toFixed(1)} km (${place}). Open Scrapper Jobs to accept.`,
+        type: "pickup_nearby",
+        data: {
+          pickupId: String(pickup._id),
+          displayId: pickup.displayId || null,
+          distanceKm: Number(dist.toFixed(2)),
+          radiusKm: NEARBY_RADIUS_KM,
+        },
+      });
+    }),
+  );
+
+  return { notified: nearby.length };
+}
 
 exports.createPickup = async (req, res) => {
   try {
     if (!req.user) {
-      return res
-        .status(401)
-        .json({
-          success: false,
-          message: "Authentication required to schedule a pickup",
-        });
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required to schedule a pickup",
+      });
     }
 
-    const { address_id, items, image_urls, scheduled_at, notes } = req.body;
+    const {
+      address_id,
+      items,
+      image_urls,
+      scheduled_at,
+      notes,
+      latitude,
+      longitude,
+    } = req.body;
     if (!address_id || !items || !Array.isArray(items) || items.length === 0) {
       return res
         .status(400)
         .json({ success: false, message: "address_id and items are required" });
     }
-    const displayId = "PKG-" + Math.random().toString(36).substring(2, 8).toUpperCase();
-    const pickup = await Pickup.create({
+
+    // Resolve coordinates: request body override → saved address → user lastLocation
+    const user = await User.findById(req.user._id);
+    const addr = user?.addresses?.id?.(address_id) ||
+      user?.addresses?.find?.((a) => a._id.toString() === String(address_id));
+
+    let pickupLat = null;
+    let pickupLng = null;
+
+    if (isValidCoords(latitude, longitude)) {
+      pickupLat = Number(latitude);
+      pickupLng = Number(longitude);
+    } else if (addr && isValidCoords(addr.latitude, addr.longitude)) {
+      pickupLat = Number(addr.latitude);
+      pickupLng = Number(addr.longitude);
+    } else if (isValidCoords(user?.lastLocation?.latitude, user?.lastLocation?.longitude)) {
+      pickupLat = Number(user.lastLocation.latitude);
+      pickupLng = Number(user.lastLocation.longitude);
+    }
+
+    // Persist coords on address if we have them but address doesn't
+    if (
+      addr &&
+      isValidCoords(pickupLat, pickupLng) &&
+      !isValidCoords(addr.latitude, addr.longitude)
+    ) {
+      addr.latitude = pickupLat;
+      addr.longitude = pickupLng;
+      await user.save();
+    }
+
+    const displayId =
+      "PKG-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    const pickupPayload = {
       user: req.user._id,
       address_id,
       items,
@@ -26,11 +126,37 @@ exports.createPickup = async (req, res) => {
       scheduled_at: scheduled_at ? new Date(scheduled_at) : undefined,
       notes,
       displayId,
-    });
-    // normalize response to include `id` for frontend convenience
+    };
+
+    if (isValidCoords(pickupLat, pickupLng)) {
+      pickupPayload.location = {
+        latitude: pickupLat,
+        longitude: pickupLng,
+      };
+    }
+
+    const pickup = await Pickup.create(pickupPayload);
+
+    const addressLabel = addr
+      ? [addr.locality, addr.city, addr.pincode].filter(Boolean).join(", ")
+      : null;
+
+    // Fire-and-forget nearby scrapper notifications (don't block response)
+    let nearbyNotify = { notified: 0 };
+    try {
+      nearbyNotify = await notifyNearbyScrapers(pickup, addressLabel);
+    } catch {
+      // ignore notify failures
+    }
+
     const out = pickup.toObject ? pickup.toObject() : pickup;
     out.id = out._id;
-    res.status(201).json({ success: true, pickup: out });
+    res.status(201).json({
+      success: true,
+      pickup: out,
+      nearbyScrapersNotified: nearbyNotify.notified,
+      nearbyRadiusKm: NEARBY_RADIUS_KM,
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -39,7 +165,6 @@ exports.createPickup = async (req, res) => {
 exports.listPickups = async (req, res) => {
   try {
     const { status } = req.query;
-    // Only return pickups belonging to the authenticated user, unless admin
     const filter = {};
     if (status) filter.status = status;
 
@@ -55,17 +180,16 @@ exports.listPickups = async (req, res) => {
 
     const pickups = await Pickup.find(filter).sort({ createdAt: -1 });
 
-    // Look up the user's addresses so we can attach address details
-    const User = require("../models/User");
     const user = req.user ? await User.findById(req.user._id) : null;
     const userAddresses = user?.addresses || [];
 
-    // Normalize each pickup to include `id` and `address` fields
     const normalized = pickups.map((p) => {
       const out = p.toObject ? p.toObject() : p;
       out.id = out._id;
       if (out.address_id) {
-        out.address = userAddresses.find(a => a._id.toString() === out.address_id) || null;
+        out.address =
+          userAddresses.find((a) => a._id.toString() === out.address_id) ||
+          null;
       }
       return out;
     });
@@ -82,12 +206,12 @@ exports.getPickup = async (req, res) => {
       return res.status(404).json({ success: false, message: "Not found" });
     const out = pickup.toObject ? pickup.toObject() : pickup;
     out.id = out._id;
-    
-    // Attach address details
-    const User = require("../models/User");
+
     const user = await User.findById(pickup.user);
     if (user && user.addresses) {
-      const addr = user.addresses.find(a => a._id.toString() === pickup.address_id);
+      const addr = user.addresses.find(
+        (a) => a._id.toString() === pickup.address_id,
+      );
       if (addr) out.address = addr;
     }
 
@@ -106,7 +230,6 @@ exports.cancelPickup = async (req, res) => {
         .json({ success: false, message: "Pickup not found" });
     }
 
-    // Only the owner (or admin) can cancel the pickup
     if (
       !req.user ||
       (pickup.user &&

@@ -39,7 +39,8 @@
         "android.permission.INTERNET",
         "android.permission.VIBRATE",
         "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.POST_NOTIFICATIONS"
       ]
     },
     "web": {
@@ -63,6 +64,22 @@
         {
           "photosPermission": "Eco Scrap needs access to your photos to attach scrap item images.",
           "cameraPermission": "Eco Scrap needs camera access to take photos of your scrap items."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/app/eco_icon_512.png",
+          "color": "#2E7D32",
+          "defaultChannel": "default",
+          "sounds": []
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Eco Scrap needs location access to match scrap collectors within 10 km.",
+          "isAndroidForegroundServiceEnabled": false
         }
       ],
       "@react-native-community/datetimepicker"

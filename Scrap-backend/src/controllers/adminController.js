@@ -1,27 +1,7 @@
 const ScrapItem = require("../models/ScrapItem");
 const User = require("../models/User");
 const Pickup = require("../models/Pickup");
-
-const sendExpoPush = async (pushToken, title, body, data = {}) => {
-  if (!pushToken || !pushToken.startsWith("ExponentPushToken")) return;
-  try {
-    await fetch("https://exp.host/--/api/v2/push/send", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        to: pushToken,
-        title,
-        body,
-        data,
-        sound: "default",
-        priority: "high",
-      }),
-    });
-  } catch {}
-};
+const { sendExpoPush, notifyUser } = require("../utils/notify");
 
 exports.getDashboardStats = async (req, res) => {
   try {
@@ -170,8 +150,9 @@ exports.sendNotification = async (req, res) => {
 exports.getAllUsers = async (req, res) => {
   try {
     const { page = 1, limit = 20 } = req.query;
-    const total = await User.countDocuments({ role: "user" });
-    const users = await User.find({ role: "user" })
+    const userFilter = { role: { $in: ["user", "scrapper"] } };
+    const total = await User.countDocuments(userFilter);
+    const users = await User.find(userFilter)
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit));
@@ -207,6 +188,7 @@ exports.getAllPickups = async (req, res) => {
     const total = await Pickup.countDocuments(filter);
     const pickups = await Pickup.find(filter)
       .populate("user", "name email phone addresses")
+      .populate("assignedScrapper", "name phone email")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit));
@@ -235,10 +217,9 @@ exports.getAllPickups = async (req, res) => {
 
 exports.getPickupDetails = async (req, res) => {
   try {
-    const pickup = await Pickup.findById(req.params.id).populate(
-      "user",
-      "name email phone addresses",
-    );
+    const pickup = await Pickup.findById(req.params.id)
+      .populate("user", "name email phone addresses")
+      .populate("assignedScrapper", "name phone email");
     if (!pickup)
       return res
         .status(404)
@@ -281,9 +262,8 @@ exports.updatePickupStatus = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Pickup not found" });
 
-    // Send notification to user
-    const user = await User.findById(pickup.user._id);
-    if (user?.pushToken) {
+    // Notify customer (in-app + push)
+    if (pickup.user?._id) {
       const statusMessages = {
         accepted:
           "Your pickup has been confirmed! Our team will pick it up soon.",
@@ -292,9 +272,13 @@ exports.updatePickupStatus = async (req, res) => {
       };
       const msg = statusMessages[status];
       if (msg) {
-        await sendExpoPush(user.pushToken, "Pickup Status Update", msg, {
-          pickupId: String(pickup._id),
-          status,
+        await notifyUser({
+          userId: pickup.user._id,
+          title: "Pickup Status Update",
+          body: msg,
+          type: "pickup_update",
+          reason: adminNote || undefined,
+          data: { pickupId: String(pickup._id), status },
         });
       }
     }

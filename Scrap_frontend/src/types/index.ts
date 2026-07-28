@@ -1,3 +1,6 @@
+export type ScrapperStatus = 'none' | 'pending' | 'approved' | 'rejected';
+export type UserRole = 'user' | 'admin' | 'scrapper';
+
 export interface User {
   id: string;
   phone: string;
@@ -6,6 +9,8 @@ export interface User {
   email: string | null;
   referral_code: string | null;
   category: string;
+  role?: UserRole;
+  scrapperStatus?: ScrapperStatus;
 }
 
 export interface Address {

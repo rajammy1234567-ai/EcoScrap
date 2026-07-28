@@ -1,10 +1,12 @@
+import { useCallback } from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../../src/context/AuthContext";
 import { useTabBarInset } from "../../src/hooks/useTabBarInset";
+import { api } from "../../src/services/api";
 import { colors, radii, spacing, typography, layout, shadows } from "../../src/theme";
 
 function MenuRow({
@@ -33,7 +35,24 @@ function MenuCard({ children }: { children: React.ReactNode }) {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, setUser, isAuthenticated } = useAuth();
+
+  // Keep role / scrapperStatus fresh after admin approval
+  useFocusEffect(
+    useCallback(() => {
+      if (!isAuthenticated) return;
+      api
+        .get("/api/auth/me")
+        .then((res) => {
+          if (res.data?.user) setUser(res.data.user);
+        })
+        .catch(() => {});
+    }, [isAuthenticated, setUser]),
+  );
+
+  const isScrapper =
+    user?.role === "scrapper" || user?.scrapperStatus === "approved";
+  const scrapperPending = user?.scrapperStatus === "pending";
 
   const initials =
     [user?.first_name?.[0], user?.last_name?.[0]]
@@ -49,6 +68,12 @@ export default function ProfileScreen() {
     ? "XXXXXX" + user.phone.slice(-4)
     : user?.email || "Not logged in";
   const bottomInset = useTabBarInset();
+
+  const scrapperLabel = isScrapper
+    ? "Scrapper Jobs"
+    : scrapperPending
+      ? "Scrapper Application (Pending)"
+      : "Become a Scrapper";
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -92,6 +117,43 @@ export default function ProfileScreen() {
         </LinearGradient>
 
         <View style={styles.menuSection}>
+          {/* Scrapper section */}
+          <MenuCard>
+            <MenuRow
+              icon="tool"
+              label={scrapperLabel}
+              onPress={() =>
+                router.push(
+                  isScrapper
+                    ? "/(profile)/scrapper-jobs"
+                    : "/(profile)/become-scrapper",
+                )
+              }
+            />
+            {isScrapper && (
+              <>
+                <View style={styles.separator} />
+                <MenuRow
+                  icon="credit-card"
+                  label="Scrapper Wallet"
+                  onPress={() => router.push("/(profile)/scrapper-wallet")}
+                />
+                <View style={styles.separator} />
+                <MenuRow
+                  icon="file-text"
+                  label="Scrapper Application"
+                  onPress={() => router.push("/(profile)/become-scrapper")}
+                />
+              </>
+            )}
+            <View style={styles.separator} />
+            <MenuRow
+              icon="bell"
+              label="Notifications"
+              onPress={() => router.push("/(profile)/notifications")}
+            />
+          </MenuCard>
+
           <MenuCard>
             <MenuRow
               icon="help-circle"

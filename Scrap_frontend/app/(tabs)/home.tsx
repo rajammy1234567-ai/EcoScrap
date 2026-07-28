@@ -11,6 +11,7 @@ import { useFocusEffect } from 'expo-router';
 import { useAuth } from '../../src/context/AuthContext';
 import { userService } from '../../src/services/user';
 import { pickupService } from '../../src/services/pickup';
+import { scrapService } from '../../src/services/scrap';
 import { SectionHeader } from '../../src/components/layout/SectionHeader';
 import { ScrapIcon } from '../../src/components/ui/ScrapIcon';
 import { ONBOARDING_CATEGORIES } from '../../src/utils/scrapIcons';
@@ -45,11 +46,11 @@ const QUICK_ACTIONS = [
   { id: 'refer', icon: 'gift', label: 'Refer', route: '/(profile)/referral' },
 ] as const;
 
-const TOP_RATES = [
-  { name: 'Iron', rate: '₹17/kg', icon: 'Metal' },
-  { name: 'AC', rate: '₹2000/unit', icon: 'Appliances' },
-  { name: 'Fridge', rate: '₹1000/unit', icon: 'Appliances' },
-  { name: 'Washing Machine', rate: '₹800/unit', icon: 'Appliances' },
+const DEFAULT_TOP_RATES = [
+  { name: 'Iron', rate: '₹28/kg', icon: 'Metal', image_url: null as string | null },
+  { name: 'AC', rate: '₹2000/unit', icon: 'Appliances', image_url: null },
+  { name: 'Fridge', rate: '₹1000/unit', icon: 'Appliances', image_url: null },
+  { name: 'Washing Machine', rate: '₹800/unit', icon: 'Appliances', image_url: null },
 ];
 
 const HOW_IT_WORKS = [
@@ -75,9 +76,39 @@ export default function HomeScreen() {
   const [defaultAddress, setDefaultAddress] = useState<Address | null>(null);
   const [activePickup, setActivePickup] = useState<Pickup | null>(null);
   const [activePromo, setActivePromo] = useState(0);
+  const [topRates, setTopRates] = useState(DEFAULT_TOP_RATES);
   const promoRef = useRef<FlatList>(null);
 
   const loadData = useCallback(async () => {
+    // Always load live rates (admin catalog)
+    try {
+      const rateRes = await scrapService.getRateCard();
+      const flat: { name: string; rate_per_kg: number; unit: string; image_url: string | null }[] = [];
+      for (const c of rateRes.data?.categories || []) {
+        for (const i of c.items || []) {
+          flat.push({
+            name: i.name,
+            rate_per_kg: Number(i.rate_per_kg ?? 0),
+            unit: i.unit || 'Kg',
+            image_url: i.image_url || null,
+          });
+        }
+      }
+      flat.sort((a, b) => b.rate_per_kg - a.rate_per_kg);
+      if (flat.length > 0) {
+        setTopRates(
+          flat.slice(0, 4).map((r) => ({
+            name: r.name.split(/[/(]/)[0].trim(),
+            rate: `₹${r.rate_per_kg}/${(r.unit || 'Kg').toLowerCase()}`,
+            icon: r.name,
+            image_url: r.image_url,
+          })),
+        );
+      }
+    } catch {
+      /* keep default rates */
+    }
+
     if (!isAuthenticated) {
       setDefaultAddress(null);
       setActivePickup(null);
@@ -328,17 +359,21 @@ export default function HomeScreen() {
             </ScrollView>
           </View>
 
-          {/* Top rates */}
+          {/* Top rates — live from admin catalog */}
           <View style={styles.card}>
-            <SectionHeader title="Top rates today" subtitle="Updated daily · Best market prices" />
+            <SectionHeader title="Top rates today" subtitle="Live from market · Tap for full list" />
             <View style={styles.ratesRow}>
-              {TOP_RATES.map((r) => (
+              {topRates.map((r) => (
                 <Pressable
                   key={r.name}
                   style={styles.rateTile}
                   onPress={() => router.push('/(tabs)/scrap-rates')}
                 >
-                  <ScrapIcon name={r.icon} variant="compact" size={14} />
+                  {r.image_url ? (
+                    <Image source={{ uri: r.image_url }} style={styles.rateThumb} />
+                  ) : (
+                    <ScrapIcon name={r.icon} variant="compact" size={14} />
+                  )}
                   <Text style={styles.rateName} numberOfLines={1}>{r.name}</Text>
                   <Text style={styles.rateValue}>{r.rate}</Text>
                 </Pressable>
@@ -636,6 +671,12 @@ const styles = StyleSheet.create({
   catName: { ...typography.caption, fontWeight: '600' as const, color: colors.neutral.black, fontSize: 11 },
 
   ratesRow: { flexDirection: 'row', gap: spacing.sm },
+  rateThumb: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: colors.primary.green50,
+  },
   rateTile: {
     flex: 1,
     backgroundColor: colors.primary.green50,

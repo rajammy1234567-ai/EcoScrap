@@ -12,6 +12,8 @@ const addressRoutes = require("./src/routes/addressRoutes");
 const locationRoutes = require("./src/routes/locationRoutes");
 const publicScrapRoutes = require("./src/routes/publicScrapRoutes");
 const pickupRoutes = require("./src/routes/pickupRoutes");
+const scrapperRoutes = require("./src/routes/scrapperRoutes");
+const notificationRoutes = require("./src/routes/notificationRoutes");
 const dns = require("dns");
 dns.setServers(["8.8.8.8", "1.1.1.1"]);
 
@@ -20,8 +22,9 @@ const app = express();
 connectDB();
 
 app.use(cors());
-app.use(express.json({ limit: "6mb" }));
-app.use(express.urlencoded({ extended: true, limit: "6mb" }));
+// KYC images (base64) need larger payloads
+app.use(express.json({ limit: "20mb" }));
+app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
 // ── API routes ──
 app.use("/api/auth", authRoutes);
@@ -31,6 +34,8 @@ app.use("/api/v1/users/me/addresses", addressRoutes);
 app.use("/api/v1/location", locationRoutes);
 app.use("/api/v1/scrap", publicScrapRoutes);
 app.use("/api/v1/pickups", pickupRoutes);
+app.use("/api/v1/scrapper", scrapperRoutes);
+app.use("/api/v1/notifications", notificationRoutes);
 app.get("/api/health", (req, res) =>
   res.json({ status: "OK", timestamp: new Date() }),
 );

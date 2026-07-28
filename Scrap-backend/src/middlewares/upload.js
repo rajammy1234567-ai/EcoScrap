@@ -14,4 +14,17 @@ const upload = multer({
   },
 });
 
-module.exports = { upload };
+/** KYC docs — images only, slightly higher limit for phone photos */
+const kycUpload = multer({
+  storage,
+  limits: { fileSize: 3 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype && file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed for KYC"));
+    }
+  },
+});
+
+module.exports = { upload, kycUpload };
