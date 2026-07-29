@@ -13,7 +13,8 @@ const {
   NEARBY_RADIUS_KM,
 } = require("../utils/geo");
 
-const SIGNUP_BONUS = Number(process.env.SCRAPPER_SIGNUP_BONUS || 5000);
+// Cash-first mode: no automatic wallet float. Set env only if you re-enable float later.
+const SIGNUP_BONUS = Number(process.env.SCRAPPER_SIGNUP_BONUS || 0);
 const MAX_DOC_CHARS = 3.5 * 1024 * 1024; // ~base64 size guard
 
 const normalizeApp = (doc, includeDocs = false) => {
@@ -643,8 +644,10 @@ exports.acceptJob = async (req, res) => {
 };
 
 /**
- * Complete pickup + pay customer from scrapper wallet.
- * Body: { amount, customerUpi?, method?, note?, actualWeightKg?, scrapItemsSummary? }
+ * Complete pickup + record cash paid to customer (hand-to-hand).
+ * Admin pays scrapper offline; scrapper pays user cash and logs amount here.
+ * Body: { amount, note?, actualWeightKg?, scrapItemsSummary? }
+ * Record is visible to admin, user, and scrapper via pickup.paymentAmount.
  */
 exports.completeAndPay = async (req, res) => {
   try {
@@ -657,7 +660,7 @@ exports.completeAndPay = async (req, res) => {
 
     const pickup = await Pickup.findById(req.params.id).populate(
       "user",
-      "name phone payoutUpi",
+      "name phone",
     );
     if (!pickup) {
       return res
@@ -689,18 +692,17 @@ exports.completeAndPay = async (req, res) => {
 
     const {
       amount,
-      customerUpi,
-      method = "upi",
       note,
       actualWeightKg,
       scrapItemsSummary,
+      method = "cash",
     } = req.body || {};
 
     const payAmount = Number(amount);
     if (!payAmount || payAmount < 1) {
       return res.status(400).json({
         success: false,
-        message: "Payment amount (₹) is required and must be at least 1",
+        message: "Cash amount paid (₹) is required and must be at least 1",
       });
     }
     if (payAmount > 100000) {
@@ -710,149 +712,79 @@ exports.completeAndPay = async (req, res) => {
       });
     }
 
-    const upi =
-      (customerUpi || pickup.user?.payoutUpi || "").trim().toLowerCase() ||
-      null;
-    if (method === "upi" && upi && !isValidUpi(upi)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid customer UPI ID",
-      });
-    }
+    // Cash-only record — no wallet float debit
+    const payMethod = method === "cash" || !method ? "cash" : "cash";
 
-    // Debit scrapper wallet first (company float)
-    let walletResult;
-    try {
-      walletResult = await debitWallet({
-        userId: req.user._id,
-        amount: payAmount,
-        category: "customer_payout",
-        description: `Paid customer for pickup ${pickup.displayId || pickup._id}`,
-        performedBy: req.user._id,
-        pickup: pickup._id,
-        meta: { method, customerUpi: upi },
-      });
-    } catch (err) {
-      return res.status(400).json({ success: false, message: err.message });
-    }
-
-    // Create payout record
     const payout = await Payout.create({
       pickup: pickup._id,
       scrapper: req.user._id,
       customer: pickup.user?._id || pickup.user,
       amount: payAmount,
-      method:
-        method === "cash"
-          ? "cash"
-          : method === "bank"
-            ? "bank"
-            : upi
-              ? "upi"
-              : "wallet_recorded",
-      customerUpi: upi || undefined,
+      method: payMethod,
       customerName: pickup.user?.name,
-      status: "processing",
-      note: note?.trim() || "",
+      status: "completed",
+      note:
+        note?.trim() ||
+        "Cash paid hand-to-hand by scrapper to customer (recorded in app)",
       scrapWeightKg: actualWeightKg ? Number(actualWeightKg) : undefined,
       scrapItemsSummary: scrapItemsSummary || undefined,
-      walletTransaction: walletResult.transaction._id,
-    });
-
-    // Optional RazorpayX UPI payout (admin account)
-    let razorpayResult = null;
-    if (upi && method !== "cash") {
-      razorpayResult = await createUpiPayout({
-        amountInr: payAmount,
-        upiId: upi,
-        name: pickup.user?.name || "Customer",
-        referenceId: `pk_${pickup._id}`,
-        notes: {
-          pickupId: String(pickup._id),
-          scrapperId: String(req.user._id),
-        },
-      });
-
-      if (razorpayResult.mode === "razorpay_payout" && razorpayResult.success) {
-        payout.method = "razorpay_payout";
-        payout.razorpayContactId = razorpayResult.contactId;
-        payout.razorpayFundAccountId = razorpayResult.fundAccountId;
-        payout.razorpayPayoutId = razorpayResult.razorpayPayoutId;
-        payout.razorpayStatus = razorpayResult.status;
-        payout.razorpayResponse = razorpayResult.raw;
-        payout.status =
-          razorpayResult.status === "processed" ||
-          razorpayResult.status === "processing" ||
-          razorpayResult.status === "queued"
-            ? "completed"
-            : "processing";
-      } else if (razorpayResult.mode === "razorpay_failed") {
-        // Wallet already debited — mark completed as recorded; admin can reconcile
-        payout.failureReason = razorpayResult.error;
-        payout.status = "completed";
-        payout.method = "wallet_recorded";
-        payout.razorpayResponse = razorpayResult.raw;
-      } else {
-        // wallet_only mode
-        payout.status = "completed";
-        payout.method = method === "cash" ? "cash" : "wallet_recorded";
-      }
-    } else {
-      payout.status = "completed";
-      if (method === "cash") payout.method = "cash";
-      else payout.method = "wallet_recorded";
-    }
-
-    if (payout.status === "completed") {
-      payout.completedAt = new Date();
-    }
-    await payout.save();
-
-    // Link tx → payout
-    await WalletTransaction.findByIdAndUpdate(walletResult.transaction._id, {
-      payout: payout._id,
+      completedAt: new Date(),
     });
 
     pickup.status = "completed";
     pickup.paymentAmount = payAmount;
-    pickup.paymentStatus =
-      payout.status === "completed" ? "paid" : "processing";
+    pickup.paymentStatus = "paid";
     pickup.payout = payout._id;
     pickup.paidAt = new Date();
     if (note) pickup.scrapperNote = String(note).trim();
     if (actualWeightKg) pickup.actualWeightKg = Number(actualWeightKg);
     await pickup.save();
 
+    // Notify customer (user)
     if (pickup.user?._id) {
       await notifyUser({
         userId: pickup.user._id,
-        title: "Scrap Paid ✓",
-        body: `You received ₹${payAmount} for your scrap pickup${upi ? ` (UPI: ${upi})` : ""}.`,
+        title: "Pickup completed · Cash paid ✓",
+        body: `You received ₹${payAmount} cash for your scrap. Pickup ${pickup.displayId || ""}`.trim(),
         type: "pickup_update",
         data: {
           pickupId: String(pickup._id),
           amount: payAmount,
+          method: "cash",
           status: "completed",
         },
       });
     }
 
+    // Notify scrapper (self confirmation record)
+    await notifyUser({
+      userId: req.user._id,
+      title: "Cash payment recorded",
+      body: `You recorded ₹${payAmount} cash paid to ${pickup.user?.name || "customer"} for ${pickup.displayId || "pickup"}.`,
+      type: "pickup_update",
+      data: {
+        pickupId: String(pickup._id),
+        amount: payAmount,
+        method: "cash",
+        status: "completed",
+      },
+    });
+
     res.json({
       success: true,
-      message: `Pickup completed. ₹${payAmount} paid to customer.`,
+      message: `Pickup completed. ₹${payAmount} cash recorded (visible to admin, user & you).`,
       pickup: normalizePickup(pickup),
       payout: {
         id: payout._id,
         amount: payout.amount,
         status: payout.status,
         method: payout.method,
-        razorpayPayoutId: payout.razorpayPayoutId || null,
-        failureReason: payout.failureReason || null,
       },
-      wallet: {
-        balance: walletResult.wallet.balance,
+      payment: {
+        amount: payAmount,
+        method: "cash",
+        paidAt: pickup.paidAt,
       },
-      razorpay: publicStatus(),
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -1023,33 +955,14 @@ exports.adminReviewApplication = async (req, res) => {
         serviceAreas: application.serviceAreas,
         aadhaarNumber: application.aadhaarNumber,
         panNumber: application.panNumber,
-        // Bank/UPI empty until scrapper fills after approval
         upiId: application.upiId || "",
         bankAccountName: application.bankAccountName || "",
         bankAccountNumber: application.bankAccountNumber || "",
         bankIfsc: application.bankIfsc || "",
         approvedAt: new Date(),
-        signupBonusAmount: SIGNUP_BONUS,
+        signupBonusAmount: 0,
       };
-
-      // Credit signup bonus ₹5000
-      if (!application.signupBonusCredited && SIGNUP_BONUS > 0) {
-        const { wallet, transaction } = await creditWallet({
-          userId: application.user,
-          amount: SIGNUP_BONUS,
-          category: "signup_bonus",
-          description: `Scrapper signup float credit ₹${SIGNUP_BONUS}`,
-          performedBy: req.user._id,
-          meta: { applicationId: String(application._id) },
-        });
-        application.signupBonusCredited = true;
-        application.signupBonusAmount = SIGNUP_BONUS;
-        walletInfo = {
-          balance: wallet.balance,
-          credited: SIGNUP_BONUS,
-          transactionId: transaction._id,
-        };
-      }
+      // Cash mode: no automatic wallet credit on approval
     }
 
     await application.save();
@@ -1059,13 +972,12 @@ exports.adminReviewApplication = async (req, res) => {
     if (status === "approved") {
       await notifyUser({
         userId: application.user,
-        title: "Scrapper Approved + ₹" + SIGNUP_BONUS + " Credited 🎉",
-        body: `Your KYC is verified. ₹${SIGNUP_BONUS} float is now in your wallet to pay customers. ${reason}`.trim(),
+        title: "Scrapper Approved 🎉",
+        body: `Your KYC is verified. You can now accept nearby jobs and pay customers in cash. ${reason}`.trim(),
         type: "scrapper_approved",
         reason: reason || "KYC approved",
         data: {
           applicationId: String(application._id),
-          signupBonus: SIGNUP_BONUS,
         },
       });
     } else {
@@ -1083,7 +995,7 @@ exports.adminReviewApplication = async (req, res) => {
       success: true,
       message:
         status === "approved"
-          ? `Approved. ₹${SIGNUP_BONUS} credited to scrapper wallet.`
+          ? "Approved. Scrapper can accept jobs and record cash payments."
           : `Application rejected`,
       application: normalizeApp(application, false),
       wallet: walletInfo,

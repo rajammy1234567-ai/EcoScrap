@@ -195,8 +195,8 @@ function StatusBanner({
         <View style={{ flex: 1 }}>
           <Text style={styles.bannerTitle}>You are an approved Scrapper!</Text>
           <Text style={styles.bannerBody}>
-            ₹{signupBonus || application?.signupBonusAmount || 5000} wallet float
-            credited. Use Scrapper Jobs to collect & pay customers.
+            Open Scrapper Jobs for nearby pickups. Pay customers in cash and
+            record the amount when you complete.
           </Text>
         </View>
       </View>
@@ -387,7 +387,7 @@ export default function BecomeScrapperScreen() {
         "Submitted!",
         "KYC sent to admin. On approval you get ₹" +
           signupBonus +
-          " wallet credit. Bank / UPI details add later from Scrapper Wallet.",
+          ". After approval, pay users in cash and record the amount on complete.",
       );
     } catch (err: any) {
       const msg =

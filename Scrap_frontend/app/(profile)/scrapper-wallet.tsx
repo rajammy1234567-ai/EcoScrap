@@ -133,7 +133,7 @@ export default function ScrapperWalletScreen() {
         <Header onBack={() => router.back()} />
         <EmptyState
           title="Wallet locked"
-          subtitle="Approve as scrapper first to receive ₹5000 float."
+          subtitle="Approve as scrapper first. Cash payments are recorded on each job."
           ctaLabel="Become a Scrapper"
           onCta={() => router.push("/(profile)/become-scrapper")}
           icon="lock"

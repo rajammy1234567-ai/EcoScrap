@@ -206,6 +206,53 @@ export default function PickupDetailModal({ pickup, onClose, onUpdate }) {
             </div>
           )}
 
+          {/* Cash payment record (scrapper → user) */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+              💵 Cash payment (scrapper → user)
+            </h3>
+            <div className="grid grid-cols-2 gap-4 bg-green-50 p-4 rounded-lg border border-green-100">
+              <div>
+                <p className="text-sm text-gray-600">Amount paid</p>
+                <p className="font-bold text-green-800 text-xl">
+                  {pickup.paymentAmount != null && pickup.paymentAmount > 0
+                    ? `₹${pickup.paymentAmount}`
+                    : "— not recorded yet"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Payment status</p>
+                <p className="font-semibold text-gray-900">
+                  {pickup.paymentStatus || "unpaid"}
+                </p>
+              </div>
+              {pickup.paidAt && (
+                <div className="col-span-2">
+                  <p className="text-sm text-gray-600">Paid at</p>
+                  <p className="font-semibold text-gray-900">
+                    {formatDate(pickup.paidAt)}
+                  </p>
+                </div>
+              )}
+              {pickup.actualWeightKg != null && (
+                <div>
+                  <p className="text-sm text-gray-600">Actual weight</p>
+                  <p className="font-semibold text-gray-900">
+                    {pickup.actualWeightKg} kg
+                  </p>
+                </div>
+              )}
+              {pickup.scrapperNote && (
+                <div className="col-span-2">
+                  <p className="text-sm text-gray-600">Scrapper note</p>
+                  <p className="font-semibold text-gray-900">
+                    {pickup.scrapperNote}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Notes */}
           {pickup.notes && (
             <div>

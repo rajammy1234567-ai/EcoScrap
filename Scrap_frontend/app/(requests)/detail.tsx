@@ -307,6 +307,29 @@ export default function RequestDetailScreen() {
               <View style={s.divider} />
             </>
           )}
+          {((pickup as any).paymentAmount > 0 ||
+            pickup.total_amount != null) && (
+            <>
+              <InfoRow
+                label="Cash paid to you"
+                value={`₹${(pickup as any).paymentAmount ?? pickup.total_amount}`}
+              />
+              <View style={s.divider} />
+              <InfoRow
+                label="Payment status"
+                value={String((pickup as any).paymentStatus || "paid")}
+              />
+              {(pickup as any).paidAt && (
+                <>
+                  <View style={s.divider} />
+                  <InfoRow
+                    label="Paid at"
+                    value={formatDateTime((pickup as any).paidAt)}
+                  />
+                </>
+              )}
+            </>
+          )}
         </View>
 
         {/* ── ADDRESS ───────────────────────────────────────────────────── */}

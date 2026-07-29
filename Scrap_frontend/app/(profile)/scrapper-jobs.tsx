@@ -147,8 +147,8 @@ export default function ScrapperJobsScreen() {
   const openPay = (job: JobPickup) => {
     setPayJob(job);
     setPayAmount("");
-    setPayUpi(job.customer?.payoutUpi || "");
-    setPayMethod("upi");
+    setPayUpi("");
+    setPayMethod("cash");
     setPayWeight("");
   };
 
@@ -156,13 +156,9 @@ export default function ScrapperJobsScreen() {
     if (!payJob) return;
     const amount = Number(payAmount);
     if (!amount || amount < 1) {
-      showAlert("Amount required", "Enter the amount to pay the customer");
-      return;
-    }
-    if (wallet && wallet.balance < amount) {
       showAlert(
-        "Insufficient balance",
-        `Wallet has ₹${wallet.balance}. Ask admin to top-up.`,
+        "Amount required",
+        "Enter cash amount you paid the customer (₹)",
       );
       return;
     }
@@ -172,30 +168,13 @@ export default function ScrapperJobsScreen() {
     try {
       const res = await scrapperService.completeAndPay(id, {
         amount,
-        customerUpi: payMethod === "upi" ? payUpi.trim() || undefined : undefined,
-        method: payMethod,
+        method: "cash",
         actualWeightKg: payWeight ? Number(payWeight) : undefined,
       });
       setPayJob(null);
-      if (res.data.wallet?.balance != null) {
-        setWallet((w) =>
-          w
-            ? {
-                ...w,
-                balance: res.data.wallet.balance,
-                totalDebited:
-                  (w.totalDebited || 0) + Number(payAmount),
-              }
-            : {
-                balance: res.data.wallet.balance,
-                totalCredited: 0,
-                totalDebited: Number(payAmount),
-              },
-        );
-      }
       const paidMsg =
         res.data.message ||
-        `₹${amount} paid. Remaining wallet: ₹${res.data.wallet?.balance ?? "—"}`;
+        `₹${amount} cash recorded. Admin, user & you can see this amount.`;
 
       // Optional: happy customer photo for home page
       const askHappy = async () => {
@@ -363,7 +342,7 @@ export default function ScrapperJobsScreen() {
               color={colors.primary.green600}
             />
             <Text style={styles.paidText}>
-              Paid customer ₹{item.paymentAmount}
+              Cash paid to customer ₹{item.paymentAmount}
             </Text>
           </View>
         )}
@@ -381,7 +360,7 @@ export default function ScrapperJobsScreen() {
             )}
             {isMine && (
               <Button
-                label="Complete & Pay"
+                label="Complete · Record cash"
                 variant="primaryDark"
                 onPress={() => openPay(item)}
                 style={{ flex: 1 }}
@@ -535,13 +514,12 @@ export default function ScrapperJobsScreen() {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Complete & Pay Customer</Text>
+            <Text style={styles.modalTitle}>Complete · Cash paid</Text>
             <Text style={styles.modalSub}>
-              Wallet balance: ₹{wallet?.balance ?? "—"} · Pickup{" "}
-              {payJob?.displayId}
+              Enter cash you gave the customer · {payJob?.displayId}
             </Text>
 
-            <Text style={styles.fieldLabel}>Amount to pay (₹) *</Text>
+            <Text style={styles.fieldLabel}>Cash paid to customer (₹) *</Text>
             <TextInput
               style={styles.input}
               value={payAmount}
@@ -550,43 +528,6 @@ export default function ScrapperJobsScreen() {
               placeholder="e.g. 450"
               placeholderTextColor={colors.neutral.gray400}
             />
-
-            <Text style={styles.fieldLabel}>Payment method</Text>
-            <View style={styles.methodRow}>
-              {(["upi", "cash"] as const).map((m) => (
-                <Pressable
-                  key={m}
-                  onPress={() => setPayMethod(m)}
-                  style={[
-                    styles.methodChip,
-                    payMethod === m && styles.methodChipActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.methodText,
-                      payMethod === m && styles.methodTextActive,
-                    ]}
-                  >
-                    {m.toUpperCase()}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
-            {payMethod === "upi" && (
-              <>
-                <Text style={styles.fieldLabel}>Customer UPI</Text>
-                <TextInput
-                  style={styles.input}
-                  value={payUpi}
-                  onChangeText={setPayUpi}
-                  placeholder="customer@upi"
-                  autoCapitalize="none"
-                  placeholderTextColor={colors.neutral.gray400}
-                />
-              </>
-            )}
 
             <Text style={styles.fieldLabel}>Actual weight (kg)</Text>
             <TextInput
@@ -599,8 +540,8 @@ export default function ScrapperJobsScreen() {
             />
 
             <Text style={styles.modalNote}>
-              Amount is deducted from your company float wallet. Admin Razorpay
-              is used for UPI when enabled. Full record goes to admin ledger.
+              Cash only: pay the user hand-to-hand, then enter the amount.
+              Record is saved for Admin, User and you. No wallet float.
             </Text>
 
             <View style={styles.modalActions}>
@@ -611,7 +552,7 @@ export default function ScrapperJobsScreen() {
                 style={{ flex: 1 }}
               />
               <Button
-                label={paying ? "Paying..." : "Pay & Complete"}
+                label={paying ? "Saving..." : "Complete · Save cash"}
                 variant="primaryGreen"
                 loading={paying}
                 onPress={handlePay}

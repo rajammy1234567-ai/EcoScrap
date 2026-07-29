@@ -151,7 +151,7 @@ export function ScrappersPage() {
       setSuccess(
         status === "approved"
           ? res.data.message ||
-              "Approved! ₹5000 credited to scrapper wallet & user notified."
+              "Approved! Scrapper can accept jobs and record cash payments."
           : "Application rejected. User notified with reason.",
       );
       setSelected(null);
@@ -243,7 +243,7 @@ export function ScrappersPage() {
             🛠️ Scrapper & Wallet
           </h2>
           <p className="text-gray-600">
-            KYC review · ₹5000 signup float · payout ledger (Admin Razorpay)
+            KYC review · cash pickup records (admin pays scrapper offline)
           </p>
         </div>
         <button onClick={loadTab} className="btn-secondary">
@@ -680,9 +680,9 @@ export function ScrappersPage() {
               {selected.status === "pending" ? (
                 <>
                   <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-blue-800">
-                    On <strong>Accept</strong>, scrapper wallet gets{" "}
-                    <strong>₹5000</strong> float to pay customers (tracked in
-                    ledger). Razorpay uses admin account when enabled.
+                    On <strong>Accept</strong>, scrapper can take jobs. Cash:
+                    admin pays scrapper offline; scrapper pays user cash and
+                    records amount on complete.
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -703,7 +703,7 @@ export function ScrappersPage() {
                       className="btn-success flex-1 flex items-center justify-center gap-2"
                     >
                       <CheckCircle size={18} />
-                      {reviewing ? "..." : "Accept + Credit ₹5000"}
+                      {reviewing ? "..." : "Accept"}
                     </button>
                     <button
                       disabled={reviewing}

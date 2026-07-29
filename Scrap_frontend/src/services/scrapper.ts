@@ -93,13 +93,12 @@ export const scrapperService = {
 
   acceptJob: (id: string) => api.put(`/api/v1/scrapper/jobs/${id}/accept`),
 
-  /** Complete pickup + pay customer from wallet */
+  /** Complete pickup + record cash paid to customer */
   completeAndPay: (
     id: string,
     data: {
       amount: number;
-      customerUpi?: string;
-      method?: 'upi' | 'cash' | 'bank';
+      method?: 'cash';
       note?: string;
       actualWeightKg?: number;
       scrapItemsSummary?: string;
