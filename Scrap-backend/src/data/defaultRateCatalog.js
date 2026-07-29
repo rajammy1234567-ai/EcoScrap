@@ -11,7 +11,7 @@ module.exports = [
   { key: "cardboard", name: "Cardboard", category: "Paper", rate_per_kg: 7, unit: "Kg", sort_order: 2 },
   { key: "books-magazines", name: "Books / Magazines", category: "Paper", rate_per_kg: 10, unit: "Kg", sort_order: 3 },
   // Metal
-  { key: "iron-steel", name: "Iron / Steel", category: "Metal", rate_per_kg: 28, unit: "Kg", sort_order: 1 },
+  { key: "iron-steel", name: "Iron / Steel", category: "Metal", rate_per_kg: 17, unit: "Kg", sort_order: 1 },
   { key: "copper-wire", name: "Copper Wire", category: "Metal", rate_per_kg: 450, unit: "Kg", sort_order: 2 },
   { key: "aluminium", name: "Aluminium", category: "Metal", rate_per_kg: 200, unit: "Kg", sort_order: 3 },
   { key: "brass", name: "Brass", category: "Metal", rate_per_kg: 400, unit: "Kg", sort_order: 4 },

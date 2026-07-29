@@ -54,7 +54,7 @@ const QUICK_ACTIONS = [
 ] as const;
 
 const DEFAULT_TOP_RATES = [
-  { name: 'Iron', rate: '₹28/kg', icon: 'Metal', image_url: null as string | null },
+  { name: 'Iron', rate: '₹17/kg', icon: 'Metal', image_url: null as string | null },
   { name: 'AC', rate: '₹2000/unit', icon: 'Appliances', image_url: null },
   { name: 'Fridge', rate: '₹1000/unit', icon: 'Appliances', image_url: null },
   { name: 'Washing Machine', rate: '₹800/unit', icon: 'Appliances', image_url: null },

@@ -10,7 +10,7 @@ const FALLBACK_SECTIONS = [
   {
     title: 'Metal',
     data: [
-      { name: 'Iron / Steel', rate_per_kg: 28, unit: 'Kg', image_url: null as string | null },
+      { name: 'Iron / Steel', rate_per_kg: 17, unit: 'Kg', image_url: null as string | null },
       { name: 'Copper Wire', rate_per_kg: 450, unit: 'Kg', image_url: null },
       { name: 'Aluminium', rate_per_kg: 200, unit: 'Kg', image_url: null },
       { name: 'Brass', rate_per_kg: 400, unit: 'Kg', image_url: null },

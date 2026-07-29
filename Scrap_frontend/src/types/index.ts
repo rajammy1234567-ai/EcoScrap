@@ -59,7 +59,11 @@ export interface Pickup {
   status: 'pending' | 'accepted' | 'completed' | 'cancelled';
   scheduled_at: string | null;
   completed_at: string | null;
+  /** Cash earned (maps from paymentAmount when scrapper records cash) */
   total_amount: number | null;
+  paymentAmount?: number | null;
+  paymentStatus?: string | null;
+  paidAt?: string | null;
   notes: string | null;
   created_at: string;
   createdAt?: string;          // backend may return camelCase
@@ -68,6 +72,16 @@ export interface Pickup {
   address?: Record<string, any> | null; // populated by backend
   items: PickupItem[];
   image_urls: string[];
+}
+
+/** Cash earned from a pickup (scrapper recorded amount) */
+export function pickupEarnedAmount(p: Partial<Pickup> | null | undefined): number {
+  if (!p) return 0;
+  const a = Number((p as any).paymentAmount);
+  if (a > 0) return a;
+  const b = Number(p.total_amount);
+  if (b > 0) return b;
+  return 0;
 }
 
 export interface PaymentMethod {

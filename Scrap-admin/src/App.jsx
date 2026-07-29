@@ -39,11 +39,11 @@ function AppContent() {
   };
 
   return (
-    <div className="flex bg-gray-50">
+    <div className="flex min-h-screen bg-slate-50">
       <Sidebar />
-      <div className="flex-1 ml-64">
+      <div className="flex-1 ml-64 min-w-0">
         <Header />
-        <main className="p-8">{renderPage()}</main>
+        <main className="p-6 md:p-8 max-w-[1400px]">{renderPage()}</main>
       </div>
     </div>
   );

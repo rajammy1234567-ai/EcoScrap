@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigation } from "../hooks/useNavigation";
-import { LogIn } from "lucide-react";
+import { Leaf, LogIn } from "lucide-react";
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
@@ -27,40 +27,45 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-900 flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-800 via-green-800 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="card bg-white shadow-2xl">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 border border-white/20">
           <div className="text-center mb-8">
-            <div className="inline-block bg-blue-100 p-4 rounded-full mb-4">
-              <LogIn size={40} className="text-blue-600" />
+            <div className="inline-flex bg-emerald-100 p-4 rounded-2xl mb-4">
+              <Leaf size={36} className="text-emerald-700" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Admin Portal</h1>
-            <p className="text-gray-500 mt-2">Scrap Management System</p>
+            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+              Eco Scrap Admin
+            </h1>
+            <p className="text-gray-500 mt-2 text-sm">
+              Pickups · scrapers · cash records · rates
+            </p>
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 text-sm">
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Email
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="input-field"
-                placeholder="admin@scrap.com"
+                placeholder="admin@unclescrap.com"
                 required
+                autoComplete="username"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                 Password
               </label>
               <input
@@ -68,32 +73,33 @@ export function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="input-field"
-                placeholder="Enter your password"
+                placeholder="••••••••"
                 required
+                autoComplete="current-password"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full btn-primary disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full btn-primary disabled:opacity-50 flex items-center justify-center gap-2 !py-3"
             >
               {loading ? (
                 <>
-                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                  Logging in...
+                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                  Signing in…
                 </>
               ) : (
                 <>
                   <LogIn size={18} />
-                  Sign In
+                  Sign in
                 </>
               )}
             </button>
           </form>
 
-          <p className="text-center text-gray-600 text-sm mt-6">
-            Demo credentials: admin@scrap.com / password
+          <p className="text-center text-xs text-gray-400 mt-6">
+            Use your admin account · cash ops ready
           </p>
         </div>
       </div>

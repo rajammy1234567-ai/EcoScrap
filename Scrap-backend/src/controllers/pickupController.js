@@ -186,6 +186,15 @@ exports.listPickups = async (req, res) => {
     const normalized = pickups.map((p) => {
       const out = p.toObject ? p.toObject() : p;
       out.id = out._id;
+      // User earnings = cash paid by scrapper (paymentAmount)
+      const earned =
+        Number(out.paymentAmount) > 0
+          ? Number(out.paymentAmount)
+          : Number(out.total_amount) > 0
+            ? Number(out.total_amount)
+            : 0;
+      out.paymentAmount = earned || out.paymentAmount || 0;
+      out.total_amount = earned || null;
       if (out.address_id) {
         out.address =
           userAddresses.find((a) => a._id.toString() === out.address_id) ||
@@ -193,7 +202,27 @@ exports.listPickups = async (req, res) => {
       }
       return out;
     });
-    res.json({ success: true, pickups: normalized });
+
+    // Lifetime scrap cash earned (completed + paid)
+    const totalEarned = normalized
+      .filter(
+        (p) =>
+          p.status === "completed" &&
+          (p.paymentStatus === "paid" || Number(p.paymentAmount) > 0),
+      )
+      .reduce((sum, p) => sum + (Number(p.paymentAmount) || 0), 0);
+
+    res.json({
+      success: true,
+      pickups: normalized,
+      earnings: {
+        totalEarned,
+        completedPaidCount: normalized.filter(
+          (p) =>
+            p.status === "completed" && Number(p.paymentAmount) > 0,
+        ).length,
+      },
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -206,6 +235,14 @@ exports.getPickup = async (req, res) => {
       return res.status(404).json({ success: false, message: "Not found" });
     const out = pickup.toObject ? pickup.toObject() : pickup;
     out.id = out._id;
+    const earned =
+      Number(out.paymentAmount) > 0
+        ? Number(out.paymentAmount)
+        : Number(out.total_amount) > 0
+          ? Number(out.total_amount)
+          : 0;
+    out.paymentAmount = earned || out.paymentAmount || 0;
+    out.total_amount = earned || null;
 
     const user = await User.findById(pickup.user);
     if (user && user.addresses) {

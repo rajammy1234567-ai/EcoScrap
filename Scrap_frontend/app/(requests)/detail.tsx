@@ -16,24 +16,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Button } from "../../src/components/ui/Button";
 import { Header } from "../../src/components/shared/Header";
 import { pickupService } from "../../src/services/pickup";
-import { Pickup } from "../../src/types";
+import { Pickup, pickupEarnedAmount } from "../../src/types";
 import { colors, radii, spacing, typography } from "../../src/theme";
-
-// ─── Rate Card (same as scrap-rates fallback) ────────────────────────────────
-const RATE_MAP: Record<string, number> = {
-  "paper-1": 14,   // Newspaper
-  "paper-2": 10,   // Books
-  "metal-1": 17,   // Iron ₹28/kg
-  "metal-2": 450,  // Copper
-  "ewaste-1": 500, // Laptop (per unit)
-  "ewaste-2": 200, // Phone (per unit)
-  "carton-1": 7,   // Cardboard
-  "carton-2": 5,   // Plastic Bottles
-  "others-1": 30,  // Battery
-  "appliance-1": 1000, // Fridge ₹1000/unit
-  "appliance-2": 800,  // Washing Machine ₹800/unit
-  "appliance-3": 2000, // AC ₹2000/unit
-};
 
 const ITEM_NAMES: Record<string, string> = {
   "paper-1": "Newspaper",
@@ -88,14 +72,6 @@ function formatDateTime(iso: string) {
 function getCategoryFromItemId(id: string): string {
   const prefix = id.split("-")[0];
   return CAT_LABELS[prefix] || prefix;
-}
-
-function calcExpectedAmount(items: any[]): number {
-  return items.reduce((total, item) => {
-    const rate = RATE_MAP[item.scrap_item_id] ?? 0;
-    const qty = item.estimated_qty ?? 0;
-    return total + rate * qty;
-  }, 0);
 }
 
 // ─── Info Row ─────────────────────────────────────────────────────────────────
@@ -213,7 +189,7 @@ export default function RequestDetailScreen() {
   const canCancel = pickup.status === "pending";
   const items: any[] = (pickup as any).items ?? [];
   const address: any = (pickup as any).address;
-  const expectedAmount = calcExpectedAmount(items);
+
   const isCancelled = pickup.status === "cancelled";
 
   const STATUS_STEPS = [
@@ -307,12 +283,11 @@ export default function RequestDetailScreen() {
               <View style={s.divider} />
             </>
           )}
-          {((pickup as any).paymentAmount > 0 ||
-            pickup.total_amount != null) && (
+          {pickupEarnedAmount(pickup) > 0 && (
             <>
               <InfoRow
-                label="Cash paid to you"
-                value={`₹${(pickup as any).paymentAmount ?? pickup.total_amount}`}
+                label="Cash earned"
+                value={`₹${pickupEarnedAmount(pickup).toLocaleString("en-IN")}`}
               />
               <View style={s.divider} />
               <InfoRow
@@ -331,6 +306,20 @@ export default function RequestDetailScreen() {
             </>
           )}
         </View>
+
+        {pickup.status === "completed" && pickupEarnedAmount(pickup) > 0 && (
+          <LinearGradient colors={["#E8F5E9", "#C8F5C2"]} style={s.earningsCard}>
+            <View>
+              <Text style={s.earningsLabel}>You earned (cash)</Text>
+              <Text style={s.earningsNote}>
+                Recorded when scrapper completed this pickup
+              </Text>
+            </View>
+            <Text style={s.earningsAmount}>
+              ₹{pickupEarnedAmount(pickup).toLocaleString("en-IN")}
+            </Text>
+          </LinearGradient>
+        )}
 
         {/* ── ADDRESS ───────────────────────────────────────────────────── */}
         <View style={s.card}>
@@ -376,9 +365,7 @@ export default function RequestDetailScreen() {
           ) : (
             items.map((item: any, idx: number) => {
               const itemName = ITEM_NAMES[item.scrap_item_id] ?? getCategoryFromItemId(item.scrap_item_id);
-              const rate = RATE_MAP[item.scrap_item_id] ?? 0;
               const qty = item.estimated_qty ?? 0;
-              const est = rate * qty;
 
               return (
                 <View key={idx} style={[s.itemRow, idx !== items.length - 1 && s.itemRowBorder]}>
@@ -390,29 +377,13 @@ export default function RequestDetailScreen() {
                     </View>
                   </View>
                   <View style={s.itemRight}>
-                    <Text style={s.itemQty}>~{qty} kg</Text>
-                    {rate > 0 && (
-                      <Text style={s.itemEst}>₹{rate}/kg → ≈₹{est.toLocaleString("en-IN")}</Text>
-                    )}
+                    {qty > 0 && <Text style={s.itemQty}>~{qty} kg</Text>}
                   </View>
                 </View>
               );
             })
           )}
         </View>
-
-        {/* ── EXPECTED EARNING ──────────────────────────────────────────── */}
-        {items.length > 0 && expectedAmount > 0 && (
-          <LinearGradient colors={["#E8F5E9", "#C8F5C2"]} style={s.earningsCard}>
-            <View>
-              <Text style={s.earningsLabel}>Expected Earnings</Text>
-              <Text style={s.earningsNote}>Based on estimated weights & current rates</Text>
-            </View>
-            <Text style={s.earningsAmount}>
-              ₹{expectedAmount.toLocaleString("en-IN")}
-            </Text>
-          </LinearGradient>
-        )}
 
         {/* ── NOTES ─────────────────────────────────────────────────────── */}
         {(pickup as any).notes && (

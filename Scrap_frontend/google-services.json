@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "752020040329",
+    "project_id": "ecoscrap-94160",
+    "storage_bucket": "ecoscrap-94160.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:752020040329:android:acafdb87cd07e652143458",
+        "android_client_info": {
+          "package_name": "com.thekabadiwala.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDqbL3AK7K7y8VHE9lnEFCmRdv2EfSjGi0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

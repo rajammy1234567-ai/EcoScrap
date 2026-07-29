@@ -1,9 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { adminAPI } from "../services/api";
 import { StatCard, LoadingSpinner, ErrorAlert } from "../components/Header";
-import { Package, CheckCircle, Clock, XCircle } from "lucide-react";
+import {
+  Package,
+  CheckCircle,
+  Clock,
+  XCircle,
+  Users,
+  Wrench,
+  IndianRupee,
+  AlertCircle,
+  RefreshCw,
+  Heart,
+} from "lucide-react";
+import { useNavigation } from "../hooks/useNavigation";
 
 export function DashboardPage() {
+  const navigate = useNavigation();
   const [stats, setStats] = useState(null);
   const [pickupStats, setPickupStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -13,8 +26,9 @@ export function DashboardPage() {
   const [videoMsg, setVideoMsg] = useState("");
   const [savingVideo, setSavingVideo] = useState(false);
   const [videoFileName, setVideoFileName] = useState("");
-  const [videoMode, setVideoMode] = useState("url"); // url | file
+  const [videoMode, setVideoMode] = useState("url");
   const [isUploadedStored, setIsUploadedStored] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState(null);
 
   useEffect(() => {
     loadStats();
@@ -34,7 +48,7 @@ export function DashboardPage() {
         setVideoTitle(r.data?.demoVideo?.title || "");
       })
       .catch(() => {});
-    const interval = setInterval(loadStats, 30000); // Refresh every 30 seconds
+    const interval = setInterval(loadStats, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -47,7 +61,7 @@ export function DashboardPage() {
         demoVideoTitle: videoTitle.trim() || "How Eco Scrap works",
       });
       setIsUploadedStored(false);
-      setVideoMsg("Demo video URL saved — app home will play this link.");
+      setVideoMsg("Demo video URL saved — mobile home will use this link.");
     } catch (err) {
       setVideoMsg(err?.response?.data?.message || "Failed to save video");
     } finally {
@@ -64,7 +78,7 @@ export function DashboardPage() {
       return;
     }
     if (file.size > 18 * 1024 * 1024) {
-      setVideoMsg("Max video size 18MB. Compress the file or use a hosted URL.");
+      setVideoMsg("Max 18MB. Compress or use a hosted URL.");
       return;
     }
     setSavingVideo(true);
@@ -79,13 +93,12 @@ export function DashboardPage() {
       setVideoMode("file");
       setVideoUrl("");
       setVideoMsg(
-        res.data?.message ||
-          `Uploaded “${file.name}” — mobile home will use this video.`,
+        res.data?.message || `Uploaded “${file.name}” for app home.`,
       );
     } catch (err) {
       setVideoMsg(
         err?.response?.data?.message ||
-          "Upload failed. Try a smaller file or paste a URL instead.",
+          "Upload failed. Try smaller file or paste URL.",
       );
     } finally {
       setSavingVideo(false);
@@ -99,25 +112,24 @@ export function DashboardPage() {
         adminAPI.getDashboardStats(),
         adminAPI.getPickupStats(),
       ]);
-
       setStats(dashResponse.data.stats);
       setPickupStats(pickupResponse.data.stats);
+      setLastRefresh(new Date());
     } catch (err) {
       const status = err?.response?.status;
       if (!err?.response) {
         setError(
-          "Backend offline / slow. URL: https://ecoscrap-1.onrender.com — 30s wait karke refresh (Render cold start).",
+          "Backend offline / cold start. Wait ~30s and refresh (Render free tier).",
         );
       } else if (status === 404) {
-        setError(
-          "API 404. Check .env → VITE_API_URL=https://ecoscrap-1.onrender.com/api",
-        );
+        setError("API 404. Check admin API base URL points to /api");
       } else if (status === 401 || status === 403) {
-        setError("Unauthorized. Admin account se login karo.");
+        setError("Unauthorized. Login with admin account.");
       } else {
-        setError(err?.response?.data?.message || "Failed to load dashboard stats");
+        setError(
+          err?.response?.data?.message || "Failed to load dashboard stats",
+        );
       }
-      console.error("[Dashboard]", err);
     } finally {
       setLoading(false);
     }
@@ -125,142 +137,209 @@ export function DashboardPage() {
 
   if (loading) return <LoadingSpinner />;
 
+  const cashPaid =
+    pickupStats?.totalCashPaid ?? stats?.totalCashPaidToUsers ?? 0;
+  const paidPickups = pickupStats?.paidPickups ?? stats?.paidPickups ?? 0;
+
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h2>
-        <p className="text-gray-600">
-          Welcome to your admin panel. Here's an overview of your operations.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wide bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full">
+              Cash mode
+            </span>
+            {lastRefresh && (
+              <span className="text-xs text-gray-400">
+                Updated {lastRefresh.toLocaleTimeString("en-IN")}
+              </span>
+            )}
+          </div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-1">
+            Operations Dashboard
+          </h2>
+          <p className="text-gray-600 max-w-2xl">
+            Assign scrapers, track pickups, review KYC. Scrapers pay users in
+            cash and record the amount — you see every rupee here.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={loadStats}
+          className="btn-secondary flex items-center gap-2"
+        >
+          <RefreshCw size={16} />
+          Refresh
+        </button>
       </div>
 
       {error && <ErrorAlert message={error} onClose={() => setError("")} />}
 
-      {/* Pickup Statistics */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">
-          📦 Pickup Overview
+      {/* Cash summary */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="rounded-2xl bg-gradient-to-br from-emerald-600 to-green-700 text-white p-6 shadow-lg">
+          <p className="text-emerald-100 text-sm font-medium">
+            Total cash paid to users
+          </p>
+          <p className="text-4xl font-extrabold mt-2 tracking-tight">
+            ₹{Number(cashPaid).toLocaleString("en-IN")}
+          </p>
+          <p className="text-emerald-100 text-xs mt-2">
+            From {paidPickups} completed paid pickups
+          </p>
+        </div>
+        <div className="card flex flex-col justify-center">
+          <p className="text-sm text-gray-500 font-medium">Needs attention</p>
+          <div className="mt-3 space-y-2">
+            <button
+              type="button"
+              onClick={() => navigate("/pickups")}
+              className="w-full flex items-center justify-between text-left px-3 py-2 rounded-lg hover:bg-amber-50 border border-amber-100"
+            >
+              <span className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                <Clock size={16} className="text-amber-600" />
+                Pending pickups
+              </span>
+              <span className="font-bold text-amber-700">
+                {pickupStats?.pending ?? 0}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/pickups")}
+              className="w-full flex items-center justify-between text-left px-3 py-2 rounded-lg hover:bg-blue-50 border border-blue-100"
+            >
+              <span className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                <AlertCircle size={16} className="text-blue-600" />
+                Unassigned
+              </span>
+              <span className="font-bold text-blue-700">
+                {pickupStats?.unassigned ?? 0}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/scrapers")}
+              className="w-full flex items-center justify-between text-left px-3 py-2 rounded-lg hover:bg-purple-50 border border-purple-100"
+            >
+              <span className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                <Wrench size={16} className="text-purple-600" />
+                KYC pending
+              </span>
+              <span className="font-bold text-purple-700">
+                {stats?.pendingApps ?? 0}
+              </span>
+            </button>
+          </div>
+        </div>
+        <div className="card">
+          <p className="text-sm text-gray-500 font-medium mb-3">Quick actions</p>
+          <div className="grid grid-cols-1 gap-2">
+            <button
+              type="button"
+              className="btn-primary text-left"
+              onClick={() => navigate("/pickups")}
+            >
+              Manage pickups
+            </button>
+            <button
+              type="button"
+              className="btn-secondary text-left"
+              onClick={() => navigate("/scrapers")}
+            >
+              Review scrapers / KYC
+            </button>
+            <button
+              type="button"
+              className="btn-secondary text-left"
+              onClick={() => navigate("/happy-customers")}
+            >
+              Happy customers
+            </button>
+            <button
+              type="button"
+              className="btn-secondary text-left"
+              onClick={() => navigate("/rates")}
+            >
+              Rate catalog
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Pickup stats */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <Package size={20} className="text-emerald-600" />
+          Pickup overview
         </h3>
         {pickupStats ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <StatCard title="Total" value={pickupStats.total} icon={Package} color="blue" />
+            <StatCard title="Pending" value={pickupStats.pending} icon={Clock} color="yellow" />
+            <StatCard title="Accepted" value={pickupStats.accepted} icon={CheckCircle} color="blue" />
+            <StatCard title="Completed" value={pickupStats.completed} icon={CheckCircle} color="green" />
+            <StatCard title="Cancelled" value={pickupStats.cancelled} icon={XCircle} color="red" />
             <StatCard
-              title="Total Pickups"
-              value={pickupStats.total}
-              icon={Package}
-              color="blue"
-            />
-            <StatCard
-              title="Pending"
-              value={pickupStats.pending}
-              icon={Clock}
-              color="yellow"
-            />
-            <StatCard
-              title="Accepted"
-              value={pickupStats.accepted}
-              icon={CheckCircle}
-              color="blue"
-            />
-            <StatCard
-              title="Completed"
-              value={pickupStats.completed}
-              icon={CheckCircle}
+              title="Cash paid"
+              value={`₹${Number(pickupStats.totalCashPaid || 0).toLocaleString("en-IN")}`}
+              icon={IndianRupee}
               color="green"
-            />
-            <StatCard
-              title="Cancelled"
-              value={pickupStats.cancelled}
-              icon={XCircle}
-              color="red"
             />
           </div>
         ) : (
-          <p className="text-gray-500">Loading pickup stats...</p>
+          <p className="text-gray-500">Loading pickup stats…</p>
         )}
       </div>
 
-      {/* Scrap Statistics */}
+      {/* Users / scrapers */}
       {stats && (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">
-            ♻️ Scrap Items Overview
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <Users size={20} className="text-emerald-600" />
+            Users & scrapers
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              title="Total Items"
-              value={stats.total}
-              icon={Package}
-              color="blue"
-            />
-            <StatCard
-              title="Pending Review"
-              value={stats.pending}
-              icon={Clock}
-              color="yellow"
-            />
-            <StatCard
-              title="Accepted"
-              value={stats.accepted}
-              icon={CheckCircle}
-              color="green"
-            />
-            <StatCard
-              title="Total Revenue"
-              value={`₹${stats.totalRevenue || 0}`}
-              icon={Package}
-              color="green"
-            />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard title="Customers" value={stats.totalUsers ?? 0} icon={Users} color="blue" />
+            <StatCard title="Scrapers" value={stats.totalScrapers ?? 0} icon={Wrench} color="green" />
+            <StatCard title="KYC pending" value={stats.pendingApps ?? 0} icon={Clock} color="yellow" />
+            <StatCard title="Paid pickups" value={stats.paidPickups ?? paidPickups} icon={IndianRupee} color="green" />
           </div>
         </div>
       )}
 
-      {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">
-          ⚡ Quick Actions
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <a href="#/pickups" className="btn-primary block text-center">
-            View All Pickups
-          </a>
-          <a href="#/users" className="btn-secondary block text-center">
-            View Users
-          </a>
-          <button onClick={loadStats} className="btn-secondary">
-            Refresh Stats
-          </button>
-        </div>
+      {/* How cash ops work */}
+      <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6">
+        <h3 className="font-bold text-emerald-900 mb-2">Cash workflow (live)</h3>
+        <ol className="list-decimal list-inside text-sm text-emerald-900/90 space-y-1">
+          <li>User schedules pickup (optional scrap photos).</li>
+          <li>Nearby scrapers get notified · you can also assign from Pickups.</li>
+          <li>You pay scrapper offline (float / cash settlement).</li>
+          <li>Scrapper pays user cash and records amount on Complete.</li>
+          <li>Amount shows for Admin, User (My Pickups · Earned), and Scrapper.</li>
+        </ol>
       </div>
 
-      {/* Mobile home demo video — URL or gallery upload */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-2">
-          🎬 Home demo video
+      {/* Demo video */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <h3 className="text-lg font-bold text-gray-900 mb-1">
+          Home demo video
         </h3>
         <p className="text-sm text-gray-500 mb-4">
-          App home pe hero ke neeche chalta hai.{" "}
-          <strong>URL paste</strong> karo ya <strong>gallery / PC se upload</strong>.
+          Plays under hero on the mobile app. Paste URL or upload from gallery.
         </p>
 
         <div className="flex gap-2 mb-4">
           <button
             type="button"
-            className={
-              videoMode === "url"
-                ? "btn-primary text-sm"
-                : "btn-secondary text-sm"
-            }
+            className={videoMode === "url" ? "btn-primary text-sm" : "btn-secondary text-sm"}
             onClick={() => setVideoMode("url")}
           >
             Paste URL
           </button>
           <button
             type="button"
-            className={
-              videoMode === "file"
-                ? "btn-primary text-sm"
-                : "btn-secondary text-sm"
-            }
+            className={videoMode === "file" ? "btn-primary text-sm" : "btn-secondary text-sm"}
             onClick={() => setVideoMode("file")}
           >
             Upload from gallery
@@ -301,37 +380,33 @@ export function DashboardPage() {
               </button>
             </>
           ) : (
-            <>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
-                <p className="text-sm text-gray-600 mb-3">
-                  Choose MP4 / WebM / MOV from gallery or computer (max 18MB)
+            <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center bg-gray-50">
+              <p className="text-sm text-gray-600 mb-3">
+                MP4 / WebM / MOV · max 18MB
+              </p>
+              <label className="btn-primary inline-block cursor-pointer">
+                {savingVideo ? "Uploading..." : "Choose video file"}
+                <input
+                  type="file"
+                  accept="video/*"
+                  className="hidden"
+                  disabled={savingVideo}
+                  onChange={onGalleryPick}
+                />
+              </label>
+              {videoFileName && (
+                <p className="text-xs text-gray-500 mt-2">Selected: {videoFileName}</p>
+              )}
+              {isUploadedStored && (
+                <p className="text-sm text-green-700 font-medium mt-3">
+                  ✓ Video file stored for app home
                 </p>
-                <label className="btn-primary inline-block cursor-pointer">
-                  {savingVideo ? "Uploading..." : "Choose video file"}
-                  <input
-                    type="file"
-                    accept="video/*"
-                    className="hidden"
-                    disabled={savingVideo}
-                    onChange={onGalleryPick}
-                  />
-                </label>
-                {videoFileName && (
-                  <p className="text-xs text-gray-500 mt-2">
-                    Selected: {videoFileName}
-                  </p>
-                )}
-                {isUploadedStored && (
-                  <p className="text-sm text-green-700 font-medium mt-3">
-                    ✓ A video file is already stored for the app home.
-                  </p>
-                )}
-              </div>
-            </>
+              )}
+            </div>
           )}
 
           {videoMsg && (
-            <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded">
+            <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg border">
               {videoMsg}
             </p>
           )}

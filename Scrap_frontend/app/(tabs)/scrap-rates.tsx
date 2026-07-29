@@ -69,7 +69,7 @@ const FALLBACK: RateSection[] = [
   {
     title: 'Metal',
     data: [
-      { name: 'Iron / Steel', rate_per_kg: 28, unit: 'Kg' },
+      { name: 'Iron / Steel', rate_per_kg: 17, unit: 'Kg' },
       { name: 'Copper Wire', rate_per_kg: 450, unit: 'Kg' },
       { name: 'Aluminium', rate_per_kg: 200, unit: 'Kg' },
       { name: 'Brass', rate_per_kg: 400, unit: 'Kg' },
@@ -110,7 +110,7 @@ function buildFeatured(sections: RateSection[]) {
       { name: 'AC (Air Conditioner)', rate: 2000, unit: 'Unit', tag: 'Top', image_url: null as string | null },
       { name: 'Fridge', rate: 1000, unit: 'Unit', tag: 'Hot', image_url: null },
       { name: 'Washing Machine', rate: 800, unit: 'Unit', tag: 'Deal', image_url: null },
-      { name: 'Iron / Steel', rate: 28, unit: 'Kg', tag: 'Daily', image_url: null },
+      { name: 'Iron / Steel', rate: 17, unit: 'Kg', tag: 'Daily', image_url: null },
     ];
   }
   return items.map((it, i) => ({
@@ -126,7 +126,7 @@ function buildTicker(sections: RateSection[]) {
   const items = flattenItems(sections).slice(0, 10);
   if (items.length === 0) {
     return [
-      { label: 'Iron', rate: '₹28/kg' },
+      { label: 'Iron', rate: '₹17/kg' },
       { label: 'Aluminium', rate: '₹200/kg' },
       { label: 'Brass', rate: '₹400/kg' },
     ];

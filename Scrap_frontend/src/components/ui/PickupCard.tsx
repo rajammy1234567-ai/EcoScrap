@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { Pickup } from "../../types";
+import { Pickup, pickupEarnedAmount } from "../../types";
 import { colors, radii, shadows, spacing, typography } from "../../theme";
 
 const STATUS_CONFIG: Record<
@@ -59,6 +59,7 @@ export function PickupCard({ pickup, onPress }: Props) {
   const itemLabel = `${itemCount} categor${itemCount !== 1 ? "ies" : "y"}`;
   const displayId =
     pickup.displayId ?? String(pickup.id || "").slice(0, 8).toUpperCase();
+  const earned = pickupEarnedAmount(pickup);
 
   return (
     <Pressable
@@ -93,10 +94,10 @@ export function PickupCard({ pickup, onPress }: Props) {
               <Feather name="layers" size={11} color={colors.neutral.gray400} />
               <Text style={styles.metaText}>{itemLabel} selected</Text>
             </View>
-            {pickup.total_amount != null && pickup.total_amount > 0 && (
+            {earned > 0 && (
               <View style={styles.earnRow}>
                 <Text style={styles.earnLabel}>Earned</Text>
-                <Text style={styles.earnValue}>₹{pickup.total_amount}</Text>
+                <Text style={styles.earnValue}>₹{earned}</Text>
               </View>
             )}
           </View>

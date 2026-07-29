@@ -15,7 +15,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { PickupCard } from "../../src/components/ui/PickupCard";
 import { pickupService } from "../../src/services/pickup";
 import { useAuth } from "../../src/context/AuthContext";
-import { Pickup } from "../../src/types";
+import { Pickup, pickupEarnedAmount } from "../../src/types";
 import { Button } from "../../src/components/ui/Button";
 import { AppImages } from "../../src/assets/images";
 import { useTabBarInset } from "../../src/hooks/useTabBarInset";
@@ -88,27 +88,41 @@ export default function RequestsScreen() {
         return;
       }
       try {
-        const [pendingRes, completedRes, cancelledRes] = await Promise.all([
-          pickupService.list({ status: "pending" }),
-          pickupService.list({ status: "completed" }),
-          pickupService.list({ status: "cancelled" }),
-        ]);
+        const [pendingRes, acceptedRes, completedRes, cancelledRes] =
+          await Promise.all([
+            pickupService.list({ status: "pending" }),
+            pickupService.list({ status: "accepted" }).catch(() => ({
+              data: { pickups: [] as Pickup[] },
+            })),
+            pickupService.list({ status: "completed" }),
+            pickupService.list({ status: "cancelled" }),
+          ]);
         const statusMap: Record<Tab, Pickup[]> = {
-          pending: pendingRes.data.pickups ?? [],
+          pending: [
+            ...(pendingRes.data.pickups ?? []),
+            ...(acceptedRes.data.pickups ?? []),
+          ],
           completed: completedRes.data.pickups ?? [],
           cancelled: cancelledRes.data.pickups ?? [],
         };
+
         setCounts({
           pending: statusMap.pending.length,
           completed: statusMap.completed.length,
           cancelled: statusMap.cancelled.length,
         });
-        setTotalEarnings(
-          statusMap.completed.reduce(
-            (sum, p) => sum + (p.total_amount ?? 0),
-            0,
-          ),
-        );
+        // Cash earned = sum of scrapper-recorded paymentAmount on completed pickups
+        const fromApi = (completedRes.data as any)?.earnings?.totalEarned;
+        if (typeof fromApi === "number" && fromApi >= 0) {
+          setTotalEarnings(fromApi);
+        } else {
+          setTotalEarnings(
+            statusMap.completed.reduce(
+              (sum, p) => sum + pickupEarnedAmount(p),
+              0,
+            ),
+          );
+        }
         setPickups(statusMap[tab]);
       } catch {
         setPickups([]);
@@ -270,10 +284,34 @@ export default function RequestsScreen() {
           </LinearGradient>
         </Pressable>
 
+        {activeTab === "completed" && totalEarnings > 0 && (
+          <View style={styles.earnBanner}>
+            <View style={styles.earnBannerIcon}>
+              <Feather
+                name="trending-up"
+                size={18}
+                color={colors.primary.green700}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.earnBannerLabel}>Total scrap earnings</Text>
+              <Text style={styles.earnBannerValue}>
+                ₹{totalEarnings.toLocaleString("en-IN")}
+              </Text>
+              <Text style={styles.earnBannerSub}>
+                Cash received on completed pickups
+              </Text>
+            </View>
+          </View>
+        )}
+
         {pickups.length > 0 && (
           <View style={styles.listMetaRow}>
             <Text style={styles.listMeta}>
               {pickups.length} pickup{pickups.length !== 1 ? "s" : ""}
+              {activeTab === "completed" && totalEarnings > 0
+                ? ` · ₹${totalEarnings.toLocaleString("en-IN")} earned`
+                : ""}
             </Text>
             <Text style={styles.listMetaHint}>Pull to refresh</Text>
           </View>
@@ -400,6 +438,41 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
+  earnBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    backgroundColor: colors.primary.green50,
+    borderRadius: radii.xl,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.primary.green100,
+  },
+  earnBannerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: colors.neutral.white,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  earnBannerLabel: {
+    ...typography.caption,
+    color: colors.primary.green700,
+    fontWeight: "600" as const,
+  },
+  earnBannerValue: {
+    fontSize: 26,
+    fontWeight: "800" as const,
+    color: colors.primary.green700,
+    marginTop: 2,
+  },
+  earnBannerSub: {
+    ...typography.caption,
+    color: colors.neutral.gray600,
+    marginTop: 2,
+  },
   statsRow: {
     flexDirection: "row",
     gap: spacing.sm,

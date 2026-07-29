@@ -1,5 +1,14 @@
 import React from "react";
-import { LogOut, BarChart3, Package, Users, IndianRupee, Wrench, Heart } from "lucide-react";
+import {
+  LogOut,
+  BarChart3,
+  Package,
+  Users,
+  IndianRupee,
+  Wrench,
+  Heart,
+  Leaf,
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigation, useLocation } from "../hooks/useNavigation";
 
@@ -13,24 +22,29 @@ export function Header() {
   };
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200">
+    <header className="bg-white/95 backdrop-blur border-b border-gray-200 sticky top-0 z-20">
       <div className="flex justify-between items-center px-8 py-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            🚛 Scrap Admin Panel
+          <h1 className="text-xl font-extrabold text-gray-900 tracking-tight">
+            Eco Scrap Admin
           </h1>
-          <p className="text-sm text-gray-500">Manage pickups and operations</p>
+          <p className="text-sm text-gray-500">
+            Cash ops · pickups · KYC · rates
+          </p>
         </div>
         <div className="flex items-center gap-4">
+          <span className="hidden sm:inline-flex text-xs font-bold uppercase tracking-wide bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full">
+            Cash mode
+          </span>
           <div className="text-right">
-            <p className="font-medium text-gray-900">{user?.name}</p>
-            <p className="text-sm text-gray-500">{user?.email}</p>
+            <p className="font-semibold text-gray-900 text-sm">{user?.name}</p>
+            <p className="text-xs text-gray-500">{user?.email}</p>
           </div>
           <button
             onClick={handleLogout}
-            className="btn-secondary flex items-center gap-2"
+            className="btn-secondary flex items-center gap-2 !py-2"
           >
-            <LogOut size={18} />
+            <LogOut size={16} />
             Logout
           </button>
         </div>
@@ -46,50 +60,71 @@ export function Sidebar() {
   const menuItems = [
     { label: "Dashboard", icon: BarChart3, path: "/dashboard" },
     { label: "Pickups", icon: Package, path: "/pickups" },
-    { label: "Scrapers", icon: Wrench, path: "/scrapers" },
+    { label: "Scrapers / KYC", icon: Wrench, path: "/scrapers" },
     { label: "Happy Customers", icon: Heart, path: "/happy-customers" },
     { label: "Rate Catalog", icon: IndianRupee, path: "/rates" },
     { label: "Users", icon: Users, path: "/users" },
   ];
 
   return (
-    <aside className="w-64 bg-gray-900 text-white h-screen fixed left-0 top-0 pt-20 shadow-lg">
-      <nav className="p-4 space-y-2">
-        {menuItems.map((item) => (
-          <button
-            key={item.path}
-            onClick={() => navigate(item.path)}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
-              location === item.path
-                ? "bg-blue-600 text-white"
-                : "text-gray-300 hover:bg-gray-800"
-            }`}
-          >
-            <item.icon size={20} />
-            <span>{item.label}</span>
-          </button>
-        ))}
+    <aside className="w-64 bg-slate-900 text-white h-screen fixed left-0 top-0 flex flex-col shadow-xl z-30">
+      <div className="px-5 py-6 border-b border-white/10 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center">
+          <Leaf size={20} />
+        </div>
+        <div>
+          <p className="font-extrabold leading-tight">Eco Scrap</p>
+          <p className="text-[11px] text-white/50">Admin console</p>
+        </div>
+      </div>
+      <nav className="p-3 space-y-1 flex-1 overflow-y-auto">
+        {menuItems.map((item) => {
+          const active = location === item.path;
+          return (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition text-left ${
+                active
+                  ? "bg-emerald-600 text-white shadow-lg shadow-emerald-900/30"
+                  : "text-white/70 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              <item.icon size={18} />
+              <span className="font-medium text-sm">{item.label}</span>
+            </button>
+          );
+        })}
       </nav>
+      <div className="p-4 border-t border-white/10 text-[11px] text-white/40 leading-relaxed">
+        Admin pays scrapper offline.
+        <br />
+        Scrapper records cash to user on complete.
+      </div>
     </aside>
   );
 }
 
 export function StatCard({ title, value, icon: Icon, color = "blue" }) {
   const colorClasses = {
-    blue: "bg-blue-50 text-blue-600 border-blue-200",
-    green: "bg-green-50 text-green-600 border-green-200",
-    yellow: "bg-yellow-50 text-yellow-600 border-yellow-200",
-    red: "bg-red-50 text-red-600 border-red-200",
+    blue: "bg-blue-50 text-blue-600 border-blue-100",
+    green: "bg-emerald-50 text-emerald-700 border-emerald-100",
+    yellow: "bg-amber-50 text-amber-700 border-amber-100",
+    red: "bg-red-50 text-red-600 border-red-100",
   };
 
   return (
-    <div className={`card ${colorClasses[color]}`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-gray-600 text-sm font-medium">{title}</p>
-          <p className="text-3xl font-bold mt-2">{value}</p>
+    <div
+      className={`rounded-xl border p-4 ${colorClasses[color] || colorClasses.blue}`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold opacity-80 truncate">{title}</p>
+          <p className="text-2xl font-extrabold mt-1 tracking-tight break-all">
+            {value}
+          </p>
         </div>
-        <Icon size={40} className="opacity-50" />
+        {Icon && <Icon size={28} className="opacity-40 shrink-0" />}
       </div>
     </div>
   );
@@ -98,29 +133,41 @@ export function StatCard({ title, value, icon: Icon, color = "blue" }) {
 export function LoadingSpinner() {
   return (
     <div className="flex justify-center items-center h-64">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600" />
     </div>
   );
 }
 
 export function ErrorAlert({ message, onClose }) {
   return (
-    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 flex justify-between items-center">
-      <span>{message}</span>
-      <button onClick={onClose} className="font-bold">
-        ×
-      </button>
+    <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-xl flex justify-between items-start gap-3">
+      <p className="text-sm font-medium">{message}</p>
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-red-500 font-bold text-lg leading-none"
+        >
+          ×
+        </button>
+      )}
     </div>
   );
 }
 
 export function SuccessAlert({ message, onClose }) {
   return (
-    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4 flex justify-between items-center">
-      <span>{message}</span>
-      <button onClick={onClose} className="font-bold">
-        ×
-      </button>
+    <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl flex justify-between items-start gap-3">
+      <p className="text-sm font-medium">{message}</p>
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-emerald-600 font-bold text-lg leading-none"
+        >
+          ×
+        </button>
+      )}
     </div>
   );
 }

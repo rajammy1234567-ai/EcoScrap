@@ -379,10 +379,6 @@ export default function SelectItemsScreen() {
     }
   };
 
-  const estimatedEarning = selectedCats.size > 0
-    ? `₹${WEIGHTS[selectedWeightIdx].qty * 8}+ est.`
-    : null;
-
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
@@ -569,12 +565,6 @@ export default function SelectItemsScreen() {
       </ScrollView>
 
       <View style={styles.ctaWrap}>
-        {estimatedEarning && (
-          <View style={styles.estimateRow}>
-            <Text style={styles.estimateLabel}>Estimated earning</Text>
-            <Text style={styles.estimateValue}>{estimatedEarning}</Text>
-          </View>
-        )}
         <Pressable
           style={[styles.ctaBtn, !!loading && { opacity: 0.7 }]}
           onPress={handleSubmit}

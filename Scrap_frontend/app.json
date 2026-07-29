@@ -22,7 +22,8 @@
     "android": {
       "package": "com.thekabadiwala.app",
       "label": "Eco Scrap",
-      "versionCode": 7,
+      "versionCode": 8,
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/app/eco_icon_512.png",
         "backgroundColor": "#FFFFFF"
@@ -72,7 +73,8 @@
           "icon": "./assets/images/app/eco_icon_512.png",
           "color": "#2E7D32",
           "defaultChannel": "default",
-          "sounds": []
+          "sounds": [],
+          "mode": "production"
         }
       ],
       [

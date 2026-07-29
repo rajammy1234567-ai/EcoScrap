@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import { api } from './api';
 
 let handlerConfigured = false;
+let channelsConfigured = false;
 
 /** Show alerts when app is open (required once at startup). */
 export async function setupNotificationHandler(): Promise<void> {
@@ -23,22 +24,51 @@ export async function setupNotificationHandler(): Promise<void> {
   }
 }
 
+async function ensureAndroidChannels(): Promise<void> {
+  if (Platform.OS !== 'android' || channelsConfigured) return;
+  const Notifications = await import('expo-notifications');
+
+  // Default / pickup alerts
+  await Notifications.setNotificationChannelAsync('default', {
+    name: 'Pickup Alerts',
+    importance: Notifications.AndroidImportance.MAX,
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor: '#2E7D32',
+    sound: 'default',
+    enableVibrate: true,
+    showBadge: true,
+  });
+
+  // Nearby job alerts for scrapers
+  await Notifications.setNotificationChannelAsync('pickup_nearby', {
+    name: 'Nearby Pickups',
+    importance: Notifications.AndroidImportance.MAX,
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor: '#2E7D32',
+    sound: 'default',
+    enableVibrate: true,
+    showBadge: true,
+  });
+
+  await Notifications.setNotificationChannelAsync('pickup_update', {
+    name: 'Pickup Updates',
+    importance: Notifications.AndroidImportance.HIGH,
+    vibrationPattern: [0, 200, 100, 200],
+    lightColor: '#2E7D32',
+    sound: 'default',
+    showBadge: true,
+  });
+
+  channelsConfigured = true;
+}
+
 export async function requestNotificationPermission(): Promise<boolean> {
-  // expo-notifications does not support web
   if (Platform.OS === 'web') return false;
 
   const Notifications = await import('expo-notifications');
   await setupNotificationHandler();
+  await ensureAndroidChannels();
 
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'Pickup Alerts',
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#2E7D32',
-      sound: 'default',
-    });
-  }
   const { status: existing } = await Notifications.getPermissionsAsync();
   if (existing === 'granted') return true;
 
@@ -46,16 +76,23 @@ export async function requestNotificationPermission(): Promise<boolean> {
   return status === 'granted';
 }
 
-/** Request permission, get Expo push token, and save on backend. */
+/**
+ * Request permission, get Expo push token (FCM-backed on Android via google-services.json),
+ * and save on backend.
+ */
 export async function registerPushToken(): Promise<string | null> {
   if (Platform.OS === 'web') return null;
 
   try {
     const granted = await requestNotificationPermission();
-    if (!granted) return null;
+    if (!granted) {
+      if (__DEV__) console.warn('[push] permission not granted');
+      return null;
+    }
 
     const Notifications = await import('expo-notifications');
     const Constants = await import('expo-constants');
+    await ensureAndroidChannels();
 
     const projectId =
       Constants.default?.expoConfig?.extra?.eas?.projectId ||
@@ -67,11 +104,17 @@ export async function registerPushToken(): Promise<string | null> {
     });
 
     const pushToken = tokenResult?.data;
-    if (!pushToken) return null;
+    if (!pushToken) {
+      if (__DEV__) console.warn('[push] no Expo push token returned');
+      return null;
+    }
+
+    if (__DEV__) console.log('[push] token registered', pushToken.slice(0, 28) + '…');
 
     await api.put('/api/auth/push-token', { pushToken });
     return pushToken;
-  } catch {
+  } catch (err) {
+    if (__DEV__) console.warn('[push] register failed', err);
     return null;
   }
 }

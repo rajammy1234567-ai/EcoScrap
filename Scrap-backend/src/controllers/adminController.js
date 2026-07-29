@@ -5,6 +5,7 @@ const { sendExpoPush, notifyUser } = require("../utils/notify");
 
 exports.getDashboardStats = async (req, res) => {
   try {
+    const ScrapperApplication = require("../models/ScrapperApplication");
     const [
       total,
       pending,
@@ -13,6 +14,10 @@ exports.getDashboardStats = async (req, res) => {
       completed,
       rejected,
       totalUsers,
+      totalScrapers,
+      pendingApps,
+      pickupPending,
+      pickupCompleted,
     ] = await Promise.all([
       ScrapItem.countDocuments(),
       ScrapItem.countDocuments({ status: "pending" }),
@@ -20,7 +25,31 @@ exports.getDashboardStats = async (req, res) => {
       ScrapItem.countDocuments({ status: "accepted" }),
       ScrapItem.countDocuments({ status: "completed" }),
       ScrapItem.countDocuments({ status: "rejected" }),
-      User.countDocuments({ role: "user" }),
+      User.countDocuments({
+        $or: [{ role: "user" }, { role: { $exists: false } }],
+      }),
+      User.countDocuments({
+        $or: [{ role: "scrapper" }, { scrapperStatus: "approved" }],
+      }),
+      ScrapperApplication.countDocuments({ status: "pending" }),
+      Pickup.countDocuments({ status: "pending" }),
+      Pickup.countDocuments({ status: "completed" }),
+    ]);
+
+    const cashAgg = await Pickup.aggregate([
+      {
+        $match: {
+          status: "completed",
+          paymentAmount: { $gt: 0 },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalCashPaid: { $sum: "$paymentAmount" },
+          paidPickups: { $sum: 1 },
+        },
+      },
     ]);
 
     const revenueAgg = await ScrapItem.aggregate([
@@ -38,7 +67,14 @@ exports.getDashboardStats = async (req, res) => {
         completed,
         rejected,
         totalUsers,
+        totalScrapers,
+        pendingApps,
+        pickupPending,
+        pickupCompleted,
+        totalCashPaidToUsers: cashAgg[0]?.totalCashPaid || 0,
+        paidPickups: cashAgg[0]?.paidPickups || 0,
         totalRevenue: revenueAgg[0]?.total || 0,
+        mode: "cash",
       },
     });
   } catch (err) {
@@ -297,12 +333,36 @@ exports.updatePickupStatus = async (req, res) => {
 
 exports.getPickupStats = async (req, res) => {
   try {
-    const [total, pending, accepted, completed, cancelled] = await Promise.all([
-      Pickup.countDocuments(),
-      Pickup.countDocuments({ status: "pending" }),
-      Pickup.countDocuments({ status: "accepted" }),
-      Pickup.countDocuments({ status: "completed" }),
-      Pickup.countDocuments({ status: "cancelled" }),
+    const [total, pending, accepted, completed, cancelled, unassigned] =
+      await Promise.all([
+        Pickup.countDocuments(),
+        Pickup.countDocuments({ status: "pending" }),
+        Pickup.countDocuments({ status: "accepted" }),
+        Pickup.countDocuments({ status: "completed" }),
+        Pickup.countDocuments({ status: "cancelled" }),
+        Pickup.countDocuments({
+          status: "pending",
+          $or: [
+            { assignedScrapper: null },
+            { assignedScrapper: { $exists: false } },
+          ],
+        }),
+      ]);
+
+    const cashAgg = await Pickup.aggregate([
+      {
+        $match: {
+          status: "completed",
+          paymentAmount: { $gt: 0 },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalCashPaid: { $sum: "$paymentAmount" },
+          paidPickups: { $sum: 1 },
+        },
+      },
     ]);
 
     res.json({
@@ -313,6 +373,10 @@ exports.getPickupStats = async (req, res) => {
         accepted,
         completed,
         cancelled,
+        unassigned,
+        totalCashPaid: cashAgg[0]?.totalCashPaid || 0,
+        paidPickups: cashAgg[0]?.paidPickups || 0,
+        mode: "cash",
       },
     });
   } catch (err) {

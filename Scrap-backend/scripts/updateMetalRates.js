@@ -5,6 +5,22 @@ const RateCatalogItem = require("../src/models/RateCatalogItem");
 async function main() {
   await mongoose.connect(process.env.MONGODB_URI);
   await RateCatalogItem.updateOne(
+    { key: "iron-steel" },
+    {
+      $set: {
+        key: "iron-steel",
+        name: "Iron / Steel",
+        category: "Metal",
+        rate_per_kg: 17,
+        unit: "Kg",
+        sort_order: 1,
+        isActive: true,
+      },
+      $setOnInsert: { image_url: null },
+    },
+    { upsert: true },
+  );
+  await RateCatalogItem.updateOne(
     { key: "aluminium" },
     {
       $set: {
