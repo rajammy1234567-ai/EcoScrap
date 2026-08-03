@@ -180,7 +180,10 @@ exports.register = async (req, res) => {
 
       if (normalizedPhone) {
         const phoneTaken = await User.findOne({ phone: normalizedPhone });
-        if (phoneTaken && (!user || String(phoneTaken._id) !== String(user._id))) {
+        if (
+          phoneTaken &&
+          (!user || String(phoneTaken._id) !== String(user._id))
+        ) {
           return res
             .status(400)
             .json({ success: false, message: "Phone already registered" });
@@ -623,8 +626,13 @@ exports.updateProfile = async (req, res) => {
 
 exports.updatePushToken = async (req, res) => {
   try {
-    const { pushToken } = req.body;
-    await User.findByIdAndUpdate(req.user._id, { pushToken });
+    const { pushToken, fcmToken, platform } = req.body;
+    const updates = {};
+    if (pushToken !== undefined) updates.pushToken = pushToken;
+    if (fcmToken !== undefined) updates.fcmToken = fcmToken;
+    if (platform !== undefined) updates.devicePlatform = platform;
+
+    await User.findByIdAndUpdate(req.user._id, updates, { new: true });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

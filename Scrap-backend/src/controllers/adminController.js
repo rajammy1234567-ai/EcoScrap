@@ -170,14 +170,58 @@ exports.updateScrapStatus = async (req, res) => {
 
 exports.sendNotification = async (req, res) => {
   try {
-    const { userId, title, body } = req.body;
-    const user = await User.findById(userId);
-    if (!user?.pushToken)
+    const {
+      userId,
+      userIds = [],
+      sendToAll = false,
+      title,
+      body,
+      type = "general",
+      data = {},
+    } = req.body;
+
+    if (!title || !body) {
       return res
         .status(400)
-        .json({ success: false, message: "User has no push token" });
-    await sendExpoPush(user.pushToken, title, body);
-    res.json({ success: true, message: "Notification sent" });
+        .json({ success: false, message: "title and body are required" });
+    }
+
+    let users = [];
+    if (sendToAll) {
+      users = await User.find({ pushToken: { $exists: true, $ne: "" } }).select(
+        "_id pushToken",
+      );
+    } else if (Array.isArray(userIds) && userIds.length) {
+      users = await User.find({
+        _id: { $in: userIds },
+        pushToken: { $exists: true, $ne: "" },
+      }).select("_id pushToken");
+    } else if (userId) {
+      users = await User.find({
+        _id: userId,
+        pushToken: { $exists: true, $ne: "" },
+      }).select("_id pushToken");
+    }
+
+    if (!users.length) {
+      return res
+        .status(400)
+        .json({ success: false, message: "No users with push tokens found" });
+    }
+
+    const tokens = users.map((user) => user.pushToken).filter(Boolean);
+    await sendExpoPush(tokens, title, body, { ...data, type });
+
+    res.json({
+      success: true,
+      message: "Notification sent",
+      recipients: users.length,
+      mode: sendToAll
+        ? "all"
+        : Array.isArray(userIds) && userIds.length
+          ? "multiple"
+          : "single",
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -234,7 +278,9 @@ exports.getAllPickups = async (req, res) => {
       const out = p.toObject ? p.toObject() : p;
       out.id = out._id;
       if (out.user && out.user.addresses && out.address_id) {
-        out.address = out.user.addresses.find(a => a._id.toString() === out.address_id) || null;
+        out.address =
+          out.user.addresses.find((a) => a._id.toString() === out.address_id) ||
+          null;
       }
       return out;
     });
@@ -264,7 +310,9 @@ exports.getPickupDetails = async (req, res) => {
     const out = pickup.toObject ? pickup.toObject() : pickup;
     out.id = out._id;
     if (out.user && out.user.addresses && out.address_id) {
-      out.address = out.user.addresses.find(a => a._id.toString() === out.address_id) || null;
+      out.address =
+        out.user.addresses.find((a) => a._id.toString() === out.address_id) ||
+        null;
     }
     res.json({ success: true, pickup: out });
   } catch (err) {

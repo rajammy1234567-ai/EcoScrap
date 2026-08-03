@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -6,11 +6,11 @@ import {
   Pressable,
   Platform,
   Dimensions,
-} from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import { colors, radii, spacing, typography, shadows } from '../../theme';
+} from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { colors, radii, spacing, typography, shadows } from "../../theme";
 
-const { width: W } = Dimensions.get('window');
+const { width: W } = Dimensions.get("window");
 const VIDEO_H = Math.round(((W - spacing.lg * 2) * 9) / 16);
 
 type Props = {
@@ -22,7 +22,7 @@ type Props = {
  * Autoplay muted demo video with mute / play-pause.
  * Uses expo-av when available; web uses HTML <video>.
  */
-export function DemoVideoPlayer({ url, title = 'How Eco Scrap works' }: Props) {
+export function DemoVideoPlayer({ url, title = "How Eco Scrap works" }: Props) {
   const [muted, setMuted] = useState(true);
   const [playing, setPlaying] = useState(true);
   const [nativeReady, setNativeReady] = useState(false);
@@ -32,11 +32,11 @@ export function DemoVideoPlayer({ url, title = 'How Eco Scrap works' }: Props) {
   const [ResizeMode, setResizeMode] = useState<any>(null);
 
   useEffect(() => {
-    if (Platform.OS === 'web') return;
+    if (Platform.OS === "web") return;
     let cancelled = false;
     (async () => {
       try {
-        const av = await import('expo-av');
+        const av = await import("expo-av");
         if (!cancelled) {
           setVideoComp(() => av.Video);
           setResizeMode(av.ResizeMode);
@@ -53,7 +53,7 @@ export function DemoVideoPlayer({ url, title = 'How Eco Scrap works' }: Props) {
   }, []);
 
   useEffect(() => {
-    if (Platform.OS === 'web' && webRef.current) {
+    if (Platform.OS === "web" && webRef.current) {
       webRef.current.muted = muted;
       if (playing) webRef.current.play().catch(() => {});
       else webRef.current.pause();
@@ -64,7 +64,7 @@ export function DemoVideoPlayer({ url, title = 'How Eco Scrap works' }: Props) {
   const togglePlay = async () => {
     const next = !playing;
     setPlaying(next);
-    if (Platform.OS !== 'web' && videoRef.current) {
+    if (Platform.OS !== "web" && videoRef.current) {
       try {
         if (next) await videoRef.current.playAsync();
         else await videoRef.current.pauseAsync();
@@ -78,8 +78,7 @@ export function DemoVideoPlayer({ url, title = 'How Eco Scrap works' }: Props) {
     <View style={styles.wrap}>
       <Text style={styles.title}>{title}</Text>
       <View style={styles.player}>
-        {Platform.OS === 'web' ? (
-          // @ts-expect-error web-only element
+        {Platform.OS === "web" ? (
           <video
             ref={webRef}
             src={url}
@@ -88,11 +87,11 @@ export function DemoVideoPlayer({ url, title = 'How Eco Scrap works' }: Props) {
             muted={muted}
             playsInline
             style={{
-              width: '100%',
+              width: "100%",
               height: VIDEO_H,
-              objectFit: 'cover',
+              objectFit: "cover",
               borderRadius: 16,
-              backgroundColor: '#000',
+              backgroundColor: "#000",
             }}
           />
         ) : nativeReady && VideoComp ? (
@@ -100,7 +99,7 @@ export function DemoVideoPlayer({ url, title = 'How Eco Scrap works' }: Props) {
             ref={videoRef}
             source={{ uri: url }}
             style={styles.video}
-            resizeMode={ResizeMode?.Cover || 'cover'}
+            resizeMode={ResizeMode?.Cover || "cover"}
             shouldPlay={playing}
             isLooping
             isMuted={muted}
@@ -115,15 +114,11 @@ export function DemoVideoPlayer({ url, title = 'How Eco Scrap works' }: Props) {
 
         <View style={styles.controls}>
           <Pressable style={styles.ctrlBtn} onPress={togglePlay} hitSlop={8}>
-            <Feather
-              name={playing ? 'pause' : 'play'}
-              size={18}
-              color="#fff"
-            />
+            <Feather name={playing ? "pause" : "play"} size={18} color="#fff" />
           </Pressable>
           <Pressable style={styles.ctrlBtn} onPress={toggleMute} hitSlop={8}>
             <Feather
-              name={muted ? 'volume-x' : 'volume-2'}
+              name={muted ? "volume-x" : "volume-2"}
               size={18}
               color="#fff"
             />
@@ -141,40 +136,40 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.bodySmMedium,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.neutral.black,
     marginBottom: spacing.sm,
   },
   player: {
     borderRadius: radii.xl,
-    overflow: 'hidden',
-    backgroundColor: '#000',
+    overflow: "hidden",
+    backgroundColor: "#000",
     ...shadows.sm,
   },
   video: {
-    width: '100%',
+    width: "100%",
     height: VIDEO_H,
-    backgroundColor: '#000',
+    backgroundColor: "#000",
   },
   fallback: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
   },
-  fallbackText: { color: 'rgba(255,255,255,0.8)', fontSize: 12 },
+  fallbackText: { color: "rgba(255,255,255,0.8)", fontSize: 12 },
   controls: {
-    position: 'absolute',
+    position: "absolute",
     right: 10,
     bottom: 10,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   ctrlBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

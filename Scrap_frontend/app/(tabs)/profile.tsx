@@ -15,10 +15,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../../src/context/AuthContext";
 import { useTabBarInset } from "../../src/hooks/useTabBarInset";
 import { api } from "../../src/services/api";
-import {
-  contentService,
-  HappyCustomer,
-} from "../../src/services/content";
+import { contentService, HappyCustomer } from "../../src/services/content";
 import {
   colors,
   radii,
@@ -398,7 +395,7 @@ const styles = StyleSheet.create({
   },
   happySub: {
     ...typography.caption,
-    color: colors.neutral.gray500 || colors.neutral.gray400,
+    color: colors.neutral.gray400,
     marginTop: 2,
   },
   happyBadge: {

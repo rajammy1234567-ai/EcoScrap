@@ -6,44 +6,58 @@ const Notification = require("../models/Notification");
  * Android production needs google-services.json in the app build +
  * FCM V1 credentials uploaded on Expo dashboard for the EAS project.
  */
-const sendExpoPush = async (pushToken, title, body, data = {}) => {
-  if (!pushToken || !String(pushToken).startsWith("ExponentPushToken")) return;
-  try {
-    const type = data?.type || "general";
-    const channelId =
-      type === "pickup_nearby"
-        ? "pickup_nearby"
-        : type === "pickup_update" || type === "pickup_assigned"
-          ? "pickup_update"
-          : "default";
+const sendExpoPush = async (pushTokenOrTokens, title, body, data = {}) => {
+  const tokens = Array.isArray(pushTokenOrTokens)
+    ? pushTokenOrTokens.filter(Boolean)
+    : [pushTokenOrTokens];
 
-    const res = await fetch("https://exp.host/--/api/v2/push/send", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        to: pushToken,
-        title,
-        body,
-        data,
-        sound: "default",
-        priority: "high",
-        channelId,
-        // Android heads-up
-        _contentAvailable: true,
-      }),
-    });
-    if (!res.ok && process.env.NODE_ENV !== "production") {
-      const text = await res.text().catch(() => "");
-      console.warn("Expo push HTTP", res.status, text.slice(0, 200));
+  if (!tokens.length) return;
+
+  const normalizedTokens = tokens.filter(
+    (token) => token && String(token).trim(),
+  );
+  if (!normalizedTokens.length) return;
+
+  const requests = normalizedTokens.map(async (pushToken) => {
+    if (!String(pushToken).startsWith("ExponentPushToken")) return;
+    try {
+      const type = data?.type || "general";
+      const channelId =
+        type === "pickup_nearby"
+          ? "pickup_nearby"
+          : type === "pickup_update" || type === "pickup_assigned"
+            ? "pickup_update"
+            : "default";
+
+      const res = await fetch("https://exp.host/--/api/v2/push/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          to: pushToken,
+          title,
+          body,
+          data,
+          sound: "default",
+          priority: "high",
+          channelId,
+          _contentAvailable: true,
+        }),
+      });
+      if (!res.ok && process.env.NODE_ENV !== "production") {
+        const text = await res.text().catch(() => "");
+        console.warn("Expo push HTTP", res.status, text.slice(0, 200));
+      }
+    } catch (err) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("Expo push failed", err?.message);
+      }
     }
-  } catch (err) {
-    if (process.env.NODE_ENV !== "production") {
-      console.warn("Expo push failed", err?.message);
-    }
-  }
+  });
+
+  await Promise.allSettled(requests);
 };
 
 /**

@@ -58,6 +58,12 @@ const userSchema = new mongoose.Schema(
     },
     isActive: { type: Boolean, default: true },
     pushToken: { type: String },
+    fcmToken: { type: String },
+    devicePlatform: {
+      type: String,
+      enum: ["android", "ios", "web"],
+      default: "android",
+    },
     /** Scrapper onboarding status (mirrors latest application) */
     scrapperStatus: {
       type: String,
@@ -90,7 +96,8 @@ const userSchema = new mongoose.Schema(
 userSchema.pre("save", async function () {
   if (!this.isModified("password") || !this.password) return;
   // Skip re-hash if already bcrypt hash
-  if (typeof this.password === "string" && this.password.startsWith("$2")) return;
+  if (typeof this.password === "string" && this.password.startsWith("$2"))
+    return;
   this.password = await bcrypt.hash(this.password, 10);
 });
 

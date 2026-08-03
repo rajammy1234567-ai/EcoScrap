@@ -1,23 +1,53 @@
-import { useEffect, useState, useRef } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { AuthProvider, useAuth } from '../src/context/AuthContext';
-import { storage } from '../src/services/storage';
-import { useRouter, useSegments } from 'expo-router';
-import { syncLocationToServer } from '../src/services/location';
+import { useEffect, useState, useRef } from "react";
+import { AppState, AppStateStatus } from "react-native";
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { AuthProvider, useAuth } from "../src/context/AuthContext";
+import { storage } from "../src/services/storage";
+import { useRouter, useSegments } from "expo-router";
+import { syncLocationToServer } from "../src/services/location";
 import {
   registerPushToken,
+  setNotificationNavigationHandler,
   setupNotificationHandler,
-} from '../src/services/notifications';
+} from "../src/services/notifications";
 
 /** Sync GPS + push token while user is logged in (customers & scrapers). */
 function LocationAndPushSync() {
   const { isAuthenticated, token } = useAuth();
+  const router = useRouter();
   const lastSync = useRef(0);
 
   useEffect(() => {
     setupNotificationHandler().catch(() => null);
+    setNotificationNavigationHandler((payload) => {
+      const route = payload?.route || payload?.screen || payload?.target;
+      const id =
+        payload?.id ||
+        payload?.pickupId ||
+        payload?.scrapId ||
+        payload?.notificationId;
+
+      if (route === "notifications") {
+        router.push("/(profile)/notifications");
+        return;
+      }
+
+      if (
+        route === "requests" ||
+        payload?.type?.includes("pickup") ||
+        payload?.type === "pickup_update"
+      ) {
+        if (id) {
+          router.push({ pathname: "/(requests)/detail", params: { id } });
+        } else {
+          router.push("/(tabs)/requests");
+        }
+        return;
+      }
+
+      router.push("/(tabs)/home");
+    });
   }, []);
 
   const runSync = async () => {
@@ -42,12 +72,12 @@ function LocationAndPushSync() {
     const interval = setInterval(runSync, 5 * 60 * 1000);
 
     const onAppState = (state: AppStateStatus) => {
-      if (state === 'active') {
+      if (state === "active") {
         lastSync.current = 0;
         runSync();
       }
     };
-    const sub = AppState.addEventListener('change', onAppState);
+    const sub = AppState.addEventListener("change", onAppState);
 
     return () => {
       clearInterval(interval);
@@ -78,17 +108,17 @@ function RootLayoutNav() {
     if (isLoading || hasOnboarded === null) return;
 
     const seg = segments[0] as string | undefined;
-    const inOnboarding = seg === '(onboarding)';
-    const inAuth = seg === '(auth)';
-    const atIndex = !seg || seg === 'index';
+    const inOnboarding = seg === "(onboarding)";
+    const inAuth = seg === "(auth)";
+    const atIndex = !seg || seg === "index";
 
     // Don't redirect if already in auth flow (user came from onboarding)
     if (!hasOnboarded && !inOnboarding && !inAuth && atIndex) {
-      router.replace('/(onboarding)/splash1');
+      router.replace("/(onboarding)/splash1");
     } else if (hasOnboarded && atIndex) {
-      router.replace('/(tabs)/home');
+      router.replace("/(tabs)/home");
     } else if (isAuthenticated && (inAuth || inOnboarding)) {
-      router.replace('/(tabs)/home');
+      router.replace("/(tabs)/home");
     }
   }, [isAuthenticated, isLoading, hasOnboarded, segments]);
 

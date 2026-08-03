@@ -1,8 +1,53 @@
 import { Platform } from 'react-native';
+import * as Linking from 'expo-linking';
+import { router } from 'expo-router';
 import { api } from './api';
+import { storage } from './storage';
 
 let handlerConfigured = false;
 let channelsConfigured = false;
+let listenersConfigured = false;
+let navigationHandler: ((payload: Record<string, any>) => void) | null = null;
+
+function normalizePayload(data?: Record<string, any>): Record<string, any> {
+  return (data || {}) as Record<string, any>;
+}
+
+function resolveNavigationTarget(payload: Record<string, any>) {
+  const route = payload?.route || payload?.screen || payload?.target;
+  const id = payload?.id || payload?.pickupId || payload?.scrapId || payload?.notificationId;
+
+  if (route === 'notifications') {
+    return { pathname: '/(profile)/notifications' as const };
+  }
+
+  if (route === 'requests' || payload?.type?.includes('pickup') || payload?.type === 'pickup_update') {
+    return {
+      pathname: '/(requests)/detail' as const,
+      params: { id: id || '' },
+    };
+  }
+
+  return { pathname: '/(tabs)/home' as const };
+}
+
+function handleNotificationNavigation(payload: Record<string, any> = {}) {
+  if (navigationHandler) {
+    navigationHandler(payload);
+    return;
+  }
+
+  const target = resolveNavigationTarget(payload);
+  try {
+    router.push(target as any);
+  } catch {
+    Linking.openURL(Linking.createURL('/'));
+  }
+}
+
+export function setNotificationNavigationHandler(handler: (payload: Record<string, any>) => void) {
+  navigationHandler = handler;
+}
 
 /** Show alerts when app is open (required once at startup). */
 export async function setupNotificationHandler(): Promise<void> {
@@ -18,6 +63,27 @@ export async function setupNotificationHandler(): Promise<void> {
         shouldShowList: true,
       }),
     });
+
+    if (!listenersConfigured) {
+      Notifications.addNotificationReceivedListener((notification) => {
+        const payload = normalizePayload(notification.request.content.data as Record<string, any>);
+        if (__DEV__) console.log('[push] foreground notification', payload);
+      });
+
+      Notifications.addNotificationResponseReceivedListener((response) => {
+        const payload = normalizePayload(response.notification.request.content.data as Record<string, any>);
+        handleNotificationNavigation(payload);
+      });
+
+      listenersConfigured = true;
+    }
+
+    const lastResponse = await Notifications.getLastNotificationResponseAsync();
+    if (lastResponse) {
+      const payload = normalizePayload(lastResponse.notification.request.content.data as Record<string, any>);
+      handleNotificationNavigation(payload);
+    }
+
     handlerConfigured = true;
   } catch {
     // ignore
@@ -28,7 +94,6 @@ async function ensureAndroidChannels(): Promise<void> {
   if (Platform.OS !== 'android' || channelsConfigured) return;
   const Notifications = await import('expo-notifications');
 
-  // Default / pickup alerts
   await Notifications.setNotificationChannelAsync('default', {
     name: 'Pickup Alerts',
     importance: Notifications.AndroidImportance.MAX,
@@ -39,7 +104,6 @@ async function ensureAndroidChannels(): Promise<void> {
     showBadge: true,
   });
 
-  // Nearby job alerts for scrapers
   await Notifications.setNotificationChannelAsync('pickup_nearby', {
     name: 'Nearby Pickups',
     importance: Notifications.AndroidImportance.MAX,
@@ -77,8 +141,8 @@ export async function requestNotificationPermission(): Promise<boolean> {
 }
 
 /**
- * Request permission, get Expo push token (FCM-backed on Android via google-services.json),
- * and save on backend.
+ * Request permission, get an Expo push token (FCM-backed on Android via google-services.json),
+ * and save it to the backend when it changes.
  */
 export async function registerPushToken(): Promise<string | null> {
   if (Platform.OS === 'web') return null;
@@ -99,19 +163,26 @@ export async function registerPushToken(): Promise<string | null> {
       Constants.default?.easConfig?.projectId ||
       '912fc64c-4223-4244-9352-4efe6f3a130a';
 
-    const tokenResult = await Notifications.getExpoPushTokenAsync({
-      projectId,
-    });
-
+    const tokenResult = await Notifications.getExpoPushTokenAsync({ projectId });
     const pushToken = tokenResult?.data;
     if (!pushToken) {
       if (__DEV__) console.warn('[push] no Expo push token returned');
       return null;
     }
 
+    const storedToken = await storage.getPushToken();
+    if (storedToken === pushToken) {
+      return pushToken;
+    }
+
     if (__DEV__) console.log('[push] token registered', pushToken.slice(0, 28) + '…');
 
-    await api.put('/api/auth/push-token', { pushToken });
+    await api.put('/api/auth/push-token', {
+      pushToken,
+      fcmToken: pushToken,
+      platform: Platform.OS,
+    });
+    await storage.setPushToken(pushToken);
     return pushToken;
   } catch (err) {
     if (__DEV__) console.warn('[push] register failed', err);
