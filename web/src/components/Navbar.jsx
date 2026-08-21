@@ -96,18 +96,20 @@ export const Navbar = () => {
           
           {/* Brand Logo */}
           <Link to="/" className="flex items-center space-x-3 group">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-brand-700 to-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-600/20 group-hover:scale-105 transition-transform duration-300">
-              <Recycle className="w-6 h-6 animate-pulse-subtle" />
-            </div>
+            <img 
+              src="/logo.png" 
+              alt="EcoScrap Official Logo" 
+              className="w-12 h-12 rounded-2xl object-contain shadow-md shadow-emerald-700/10 group-hover:scale-105 transition-transform duration-300 bg-white p-0.5 border border-slate-200/80"
+            />
             <div className="flex flex-col">
               <span className="text-2xl font-black tracking-tight text-slate-900 flex items-center">
                 Eco<span className="text-brand-600">Scrap</span>
                 <span className="ml-1.5 text-[10px] uppercase font-black tracking-wider px-1.5 py-0.5 rounded bg-emerald-100 text-brand-800 border border-emerald-200">
-                  Official App
+                  Official
                 </span>
               </span>
               <span className="text-[11px] font-semibold text-slate-500 -mt-1">
-                Recycling & Franchise Network
+                Recycle Today, Build Tomorrow
               </span>
             </div>
           </Link>

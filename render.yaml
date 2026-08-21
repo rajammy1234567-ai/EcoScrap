@@ -1,7 +1,10 @@
-# Render Blueprint — API + Admin UI on same service
+# Render Blueprint for EcoScrap
+# Deploys API Backend + Admin UI + Public Web Portal
+
 services:
+  # 1. Backend Web Service (Node.js Express + Embedded Admin Panel at /admin)
   - type: web
-    name: ecoscrap-1
+    name: ecoscrap-api
     runtime: node
     rootDir: .
     buildCommand: npm install --prefix Scrap-admin && npm run build --prefix Scrap-admin && node Scrap-backend/scripts/copyAdminDist.js && npm install --prefix Scrap-backend
@@ -9,4 +12,20 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      # Set in Render Dashboard: MONGODB_URI, JWT_SECRET, etc.
+      # Add MONGODB_URI & JWT_SECRET in Render Dashboard Environment settings
+
+  # 2. Public Web Portal (Vite React Static Site)
+  - type: web
+    name: ecoscrap-web
+    runtime: static
+    rootDir: web
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      # React Router SPA Rewrite
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://ecoscrap-api.onrender.com

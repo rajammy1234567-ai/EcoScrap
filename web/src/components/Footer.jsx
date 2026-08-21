@@ -69,12 +69,19 @@ export const Footer = () => {
           {/* Brand Info */}
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-md">
-                <Recycle className="w-5 h-5" />
+              <img 
+                src="/logo.png" 
+                alt="EcoScrap Logo" 
+                className="w-11 h-11 rounded-2xl object-contain bg-white p-0.5 shadow-md"
+              />
+              <div className="flex flex-col">
+                <span className="text-2xl font-extrabold text-white tracking-tight">
+                  Eco<span className="text-emerald-400">Scrap</span>
+                </span>
+                <span className="text-[10px] text-slate-400 font-semibold -mt-1">
+                  Recycle Today, Build Tomorrow
+                </span>
               </div>
-              <span className="text-2xl font-extrabold text-white tracking-tight">
-                Eco<span className="text-emerald-400">Scrap</span>
-              </span>
             </div>
             <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
               India's transparent doorstep scrap recycling and structured franchise network. Connecting households, housing societies, and commercial enterprises directly with circular recycling mills.
